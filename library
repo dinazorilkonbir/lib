@@ -11277,1686 +11277,1358 @@ function Library:CreateWindow(WindowInfo)
     end
 
     function Window:AddTab(...)
-        local Name = nil
-        local Icon = nil
-        local Description = nil
-        local Tooltip = nil
-        local Order = nil
+    local Name = nil
+    local Icon = nil
+    local Description = nil
+    local Tooltip = nil
+    local Order = nil
 
-        if select("#", ...) == 1 and typeof(...) == "table" then
-            local Info = select(1, ...)
-            Name = Info.Name or "Tab"
-            Icon = Info.Icon
-            Description = Info.Description
-            Tooltip = Info.Tooltip
-            Order = Info.Order
-        else
-            Name = select(1, ...)
-            Icon = select(2, ...)
-            Description = select(3, ...)
-            Order = select(4, ...)
-        end
+    if select("#", ...) == 1 and typeof(...) == "table" then
+        local Info = select(1, ...)
+        Name = Info.Name or "Tab"
+        Icon = Info.Icon
+        Description = Info.Description
+        Tooltip = Info.Tooltip
+        Order = Info.Order
+    else
+        Name = select(1, ...)
+        Icon = select(2, ...)
+        Description = select(3, ...)
+        Order = select(4, ...)
+    end
 
-        if not tonumber(Order) then
-            Order = #Tabs:GetChildren()
-        end
+    if not tonumber(Order) then
+        Order = #Tabs:GetChildren()
+    end
 
-        local TabButton: TextButton
-        local TabLabel
-        local TabIcon
+    local TabButton: TextButton
+    local TabLabel
+    local TabIcon
 
-        local TabContainer
-        local TabLeft
-        local TabRight
+    local TabContainer
+    local TabLeft
+    local TabRight
 
-        Icon = Library:GetCustomIcon(Icon)
-        do
-            TabButton = New("TextButton", {
-                BackgroundColor3 = "MainColor",
-                BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 40),
-                Text = "",
-                LayoutOrder = Order,
-                Parent = Tabs,
-            })
-            local ButtonPadding = New("UIPadding", {
-                PaddingBottom = UDim.new(0, IsCompact and 6 or 11),
-                PaddingLeft = UDim.new(0, IsCompact and 6 or 12),
-                PaddingRight = UDim.new(0, IsCompact and 6 or 12),
-                PaddingTop = UDim.new(0, IsCompact and 6 or 11),
-                Parent = TabButton,
-            })
-
-            TabLabel = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Position = UDim2.fromOffset(30, 0),
-                Size = UDim2.new(1, -30, 1, 0),
-                Text = Name,
-                TextSize = 16,
-                TextTransparency = 0.5,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Visible = not IsCompact,
-                Parent = TabButton,
-            })
-
-            if Icon then
-                TabIcon = New("ImageLabel", {
-                    ImageColor3 = Icon.Custom and "WhiteColor" or "AccentColor",
-                    ImageTransparency = 0.5,
-                    ScaleType = Enum.ScaleType.Fit,
-                    Size = UDim2.fromScale(1, 1),
-                    SizeConstraint = IsCompact and Enum.SizeConstraint.RelativeXY or Enum.SizeConstraint.RelativeYY,
-                    Parent = TabButton,
-                })
-                Library:ApplyLucideIcon(TabIcon, Icon)
-            end
-
-            table.insert(Library.TabButtons, {
-                Label = TabLabel,
-                Padding = ButtonPadding,
-                Icon = TabIcon,
-            })
-
-            --// Tab Container \\--
-            TabContainer = New("Frame", {
-                BackgroundTransparency = 1,
-                Position = UDim2.fromScale(0, 0),
-                Size = UDim2.fromScale(1, 1),
-                Visible = false,
-                Parent = Container,
-            })
-
-            TabLeft = New("ScrollingFrame", {
-                AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                BackgroundTransparency = 1,
-                CanvasSize = UDim2.fromScale(0, 0),
-                ScrollBarImageTransparency = 1,
-                ScrollBarThickness = 0,
-                Size = UDim2.new(0.5, -3, 1, 0),
-                Parent = TabContainer,
-            })
-            New("UIListLayout", {
-                Padding = UDim.new(0, 2),
-                Parent = TabLeft,
-            })
-            New("UIPadding", {
-                PaddingBottom = UDim.new(0, 2),
-                PaddingLeft = UDim.new(0, 2),
-                PaddingRight = UDim.new(0, 2),
-                PaddingTop = UDim.new(0, 2),
-                Parent = TabLeft,
-            })
-            do
-                New("Frame", {
-                    BackgroundTransparency = 1,
-                    LayoutOrder = -1,
-                    Parent = TabLeft,
-                })
-                New("Frame", {
-                    BackgroundTransparency = 1,
-                    LayoutOrder = 1,
-                    Parent = TabLeft,
-                })
-            end
-
-            TabRight = New("ScrollingFrame", {
-                AnchorPoint = Vector2.new(1, 0),
-                AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                BackgroundTransparency = 1,
-                CanvasSize = UDim2.fromScale(0, 0),
-                Position = UDim2.fromScale(1, 0),
-                ScrollBarImageTransparency = 1,
-                ScrollBarThickness = 0,
-                Size = UDim2.new(0.5, -3, 1, 0),
-                Parent = TabContainer,
-            })
-            New("UIListLayout", {
-                Padding = UDim.new(0, 2),
-                Parent = TabRight,
-            })
-            New("UIPadding", {
-                PaddingBottom = UDim.new(0, 2),
-                PaddingLeft = UDim.new(0, 2),
-                PaddingRight = UDim.new(0, 2),
-                PaddingTop = UDim.new(0, 2),
-                Parent = TabRight,
-            })
-            do
-                New("Frame", {
-                    BackgroundTransparency = 1,
-                    LayoutOrder = -1,
-                    Parent = TabRight,
-                })
-                New("Frame", {
-                    BackgroundTransparency = 1,
-                    LayoutOrder = 1,
-                    Parent = TabRight,
-                })
-            end
-        end
-
-        --// Tab Table \\--
-        local Tab = {
-            Name = Name,
-            Description = Description,
-
-            Tooltip = Tooltip,
-            TooltipTable = nil,
-
-            Connections = {},
-            Destroyed = false,
-
-            Window = Window,
-            Button = TabButton,
-            Container = TabContainer,
-            Sides = {
-                TabLeft,
-                TabRight,
-            },
-            WarningBox = {
-                IsNormal = false,
-                LockSize = false,
-                Visible = false,
-                Title = "WARNING",
-                Text = "",
-            },
-
-            Groupboxes = {},
-            Tabboxes = {},
-            DependencyGroupboxes = {},
-        }
-
-        --// Warning Box \\--
-        local WarningBoxHolder = New("Frame", {
-            AutomaticSize = Enum.AutomaticSize.Y,
+    Icon = Library:GetCustomIcon(Icon)
+    do
+        TabButton = New("TextButton", {
+            BackgroundColor3 = "MainColor",
             BackgroundTransparency = 1,
-            Position = UDim2.fromOffset(0, 7),
-            Size = UDim2.fromScale(1, 0),
-            Visible = false,
-            Parent = TabContainer,
+            Size = UDim2.new(1, 0, 0, 40),
+            Text = "",
+            LayoutOrder = Order,
+            Parent = Tabs,
+        })
+        local ButtonPadding = New("UIPadding", {
+            PaddingBottom = UDim.new(0, IsCompact and 6 or 11),
+            PaddingLeft = UDim.new(0, IsCompact and 6 or 12),
+            PaddingRight = UDim.new(0, IsCompact and 6 or 12),
+            PaddingTop = UDim.new(0, IsCompact and 6 or 11),
+            Parent = TabButton,
         })
 
-        local WarningBox
-        local WarningBoxOutline
-        local WarningBoxShadowOutline
-        local WarningBoxScrollingFrame
-        local WarningTitle
-        local WarningStroke
-        local WarningText
-        do
-            WarningBox = New("Frame", {
-                BackgroundColor3 = Color3.fromRGB(127, 0, 0),
-                Position = UDim2.fromOffset(2, 0),
-                Size = UDim2.new(1, -5, 0, 0),
-                Parent = WarningBoxHolder,
+        --// TabLabel başlangıçta gizli
+        TabLabel = New("TextLabel", {
+            BackgroundTransparency = 1,
+            Position = UDim2.fromOffset(30, 0),
+            Size = UDim2.new(1, -30, 1, 0),
+            Text = Name,
+            TextSize = 16,
+            TextTransparency = 0.5,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Visible = false, -- Başlangıçta gizli
+            Parent = TabButton,
+        })
+
+        if Icon then
+            TabIcon = New("ImageLabel", {
+                ImageColor3 = Icon.Custom and "WhiteColor" or "AccentColor",
+                ImageTransparency = 0.5,
+                ScaleType = Enum.ScaleType.Fit,
+                Size = UDim2.fromScale(1, 1),
+                SizeConstraint = IsCompact and Enum.SizeConstraint.RelativeXY or Enum.SizeConstraint.RelativeYY,
+                Parent = TabButton,
             })
-            Library:AddToRegistry(WarningBox, {
-                BackgroundColor3 = function()
-                    return Tab.WarningBox.IsNormal == true and Library.Scheme.BackgroundColor or Color3.fromRGB(127, 0, 0)
+            Library:ApplyLucideIcon(TabIcon, Icon)
+
+            --// İkonun üzerine gelindiğinde etiketi göster
+            TabIcon.MouseEnter:Connect(function()
+                if Library.ActiveTab ~= Tab then
+                    TabLabel.Visible = true
+                    TweenService:Create(TabLabel, Library.TweenInfo, {
+                        TextTransparency = 0.25,
+                    }):Play()
                 end
+            end)
+            TabIcon.MouseLeave:Connect(function()
+                if Library.ActiveTab ~= Tab then
+                    TabLabel.Visible = false
+                    TabLabel.TextTransparency = 0.5
+                end
+            end)
+        end
+
+        table.insert(Library.TabButtons, {
+            Label = TabLabel,
+            Padding = ButtonPadding,
+            Icon = TabIcon,
+        })
+
+        --// Tab Container \\--
+        TabContainer = New("Frame", {
+            BackgroundTransparency = 1,
+            Position = UDim2.fromScale(0, 0),
+            Size = UDim2.fromScale(1, 1),
+            Visible = false,
+            Parent = Container,
+        })
+
+        TabLeft = New("ScrollingFrame", {
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            CanvasSize = UDim2.fromScale(0, 0),
+            ScrollBarImageTransparency = 1,
+            ScrollBarThickness = 0,
+            Size = UDim2.new(0.5, -3, 1, 0),
+            Parent = TabContainer,
+        })
+        New("UIListLayout", {
+            Padding = UDim.new(0, 2),
+            Parent = TabLeft,
+        })
+        New("UIPadding", {
+            PaddingBottom = UDim.new(0, 2),
+            PaddingLeft = UDim.new(0, 2),
+            PaddingRight = UDim.new(0, 2),
+            PaddingTop = UDim.new(0, 2),
+            Parent = TabLeft,
+        })
+        do
+            New("Frame", {
+                BackgroundTransparency = 1,
+                LayoutOrder = -1,
+                Parent = TabLeft,
+            })
+            New("Frame", {
+                BackgroundTransparency = 1,
+                LayoutOrder = 1,
+                Parent = TabLeft,
+            })
+        end
+
+        TabRight = New("ScrollingFrame", {
+            AnchorPoint = Vector2.new(1, 0),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            CanvasSize = UDim2.fromScale(0, 0),
+            Position = UDim2.fromScale(1, 0),
+            ScrollBarImageTransparency = 1,
+            ScrollBarThickness = 0,
+            Size = UDim2.new(0.5, -3, 1, 0),
+            Parent = TabContainer,
+        })
+        New("UIListLayout", {
+            Padding = UDim.new(0, 2),
+            Parent = TabRight,
+        })
+        New("UIPadding", {
+            PaddingBottom = UDim.new(0, 2),
+            PaddingLeft = UDim.new(0, 2),
+            PaddingRight = UDim.new(0, 2),
+            PaddingTop = UDim.new(0, 2),
+            Parent = TabRight,
+        })
+        do
+            New("Frame", {
+                BackgroundTransparency = 1,
+                LayoutOrder = -1,
+                Parent = TabRight,
+            })
+            New("Frame", {
+                BackgroundTransparency = 1,
+                LayoutOrder = 1,
+                Parent = TabRight,
+            })
+        end
+    end
+
+    --// Tab Table \\--
+    local Tab = {
+        Name = Name,
+        Description = Description,
+
+        Tooltip = Tooltip,
+        TooltipTable = nil,
+
+        Connections = {},
+        Destroyed = false,
+
+        Window = Window,
+        Button = TabButton,
+        Container = TabContainer,
+        Sides = {
+            TabLeft,
+            TabRight,
+        },
+        WarningBox = {
+            IsNormal = false,
+            LockSize = false,
+            Visible = false,
+            Title = "WARNING",
+            Text = "",
+        },
+
+        Groupboxes = {},
+        Tabboxes = {},
+        DependencyGroupboxes = {},
+    }
+
+    --// Warning Box \\--
+    local WarningBoxHolder = New("Frame", {
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(0, 7),
+        Size = UDim2.fromScale(1, 0),
+        Visible = false,
+        Parent = TabContainer,
+    })
+
+    local WarningBox
+    local WarningBoxOutline
+    local WarningBoxShadowOutline
+    local WarningBoxScrollingFrame
+    local WarningTitle
+    local WarningStroke
+    local WarningText
+    do
+        WarningBox = New("Frame", {
+            BackgroundColor3 = Color3.fromRGB(127, 0, 0),
+            Position = UDim2.fromOffset(2, 0),
+            Size = UDim2.new(1, -5, 0, 0),
+            Parent = WarningBoxHolder,
+        })
+        Library:AddToRegistry(WarningBox, {
+            BackgroundColor3 = function()
+                return Tab.WarningBox.IsNormal == true and Library.Scheme.BackgroundColor or Color3.fromRGB(127, 0, 0)
+            end
+        })
+        table.insert(
+            Library.Corners,
+            New("UICorner", {
+                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                Parent = WarningBox,
+            })
+        )
+        WarningBoxOutline, WarningBoxShadowOutline = Library:AddOutline(WarningBox)
+        Library:AddToRegistry(WarningBoxOutline, {
+            Color = function()
+                return Tab.WarningBox.IsNormal == true and Library.Scheme.OutlineColor or Color3.fromRGB(255, 50, 50)
+            end
+        })
+        Library:AddToRegistry(WarningBoxShadowOutline, {
+            Color = function()
+                return Tab.WarningBox.IsNormal == true and Library.Scheme.DarkColor or Color3.fromRGB(85, 0, 0)
+            end
+        })
+
+        WarningBoxScrollingFrame = New("ScrollingFrame", {
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Size = UDim2.fromScale(1, 1),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ScrollBarThickness = 3,
+            ScrollingDirection = Enum.ScrollingDirection.Y,
+            Parent = WarningBox,
+        })
+        New("UIPadding", {
+            PaddingBottom = UDim.new(0, 4),
+            PaddingLeft = UDim.new(0, 6),
+            PaddingRight = UDim.new(0, 6),
+            PaddingTop = UDim.new(0, 4),
+            Parent = WarningBoxScrollingFrame,
+        })
+
+        WarningTitle = New("TextLabel", {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, -4, 0, 14),
+            Text = "",
+            TextColor3 = Color3.fromRGB(255, 50, 50),
+            TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Parent = WarningBoxScrollingFrame,
+        })
+        Library:AddToRegistry(WarningTitle, {
+            TextColor3 = function()
+                return Tab.WarningBox.IsNormal == true and Library.Scheme.FontColor or Color3.fromRGB(255, 50, 50)
+            end
+        })
+
+        WarningStroke = New("UIStroke", {
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+            Color = Color3.fromRGB(169, 0, 0),
+            LineJoinMode = Enum.LineJoinMode.Miter,
+            Parent = WarningTitle,
+        })
+        Library:AddToRegistry(WarningStroke, {
+            Color = function()
+                return Tab.WarningBox.IsNormal == true and Library.Scheme.OutlineColor or Color3.fromRGB(169, 0, 0)
+            end
+        })
+
+        WarningText = New("TextLabel", {
+            BackgroundTransparency = 1,
+            Position = UDim2.fromOffset(0, 16),
+            Size = UDim2.new(1, -4, 0, 0),
+            Text = "",
+            TextSize = 14,
+            TextWrapped = true,
+            Parent = WarningBoxScrollingFrame,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Top,
+        })
+
+        New("UIStroke", {
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+            Color = "DarkColor",
+            LineJoinMode = Enum.LineJoinMode.Miter,
+            Parent = WarningText,
+        })
+    end
+
+    --// Tab Handlers \\--
+    function Tab:UpdateWarningBox(Info)
+        if typeof(Info.IsNormal) == "boolean" then
+            Tab.WarningBox.IsNormal = Info.IsNormal
+        end
+        if typeof(Info.LockSize) == "boolean" then
+            Tab.WarningBox.LockSize = Info.LockSize
+        end
+        if typeof(Info.Visible) == "boolean" then
+            Tab.WarningBox.Visible = Info.Visible
+        end
+        if typeof(Info.Title) == "string" then
+            Tab.WarningBox.Title = Info.Title
+        end
+        if typeof(Info.Text) == "string" then
+            Tab.WarningBox.Text = Info.Text
+        end
+
+        WarningBoxHolder.Visible = Tab.WarningBox.Visible
+        WarningTitle.Text = Tab.WarningBox.Title
+        WarningText.Text = Tab.WarningBox.Text
+        Tab:Resize(true)
+
+        WarningBox.BackgroundColor3 = Library.Registry[WarningBox].BackgroundColor3()
+        WarningBoxShadowOutline.Color = Library.Registry[WarningBoxShadowOutline].Color()
+        WarningBoxOutline.Color = Library.Registry[WarningBoxOutline].Color()
+        WarningTitle.TextColor3 = Library.Registry[WarningTitle].TextColor3()
+        WarningStroke.Color = Library.Registry[WarningStroke].Color()
+    end
+
+    function Tab:RefreshSides()
+        local Offset = WarningBoxHolder.Visible and WarningBox.Size.Y.Offset + 8 or 0
+        for _, Side in Tab.Sides do
+            Side.Position = UDim2.new(Side.Position.X.Scale, 0, 0, Offset)
+            Side.Size = UDim2.new(0.5, -3, 1, -Offset)
+        end
+    end
+
+    function Tab:Resize(ResizeWarningBox: boolean?)
+        if ResizeWarningBox then
+            local MaximumSize = math.floor(TabContainer.AbsoluteSize.Y / 3.25)
+            local _, YText = Library:GetTextBounds(
+                WarningText.Text,
+                Library.Scheme.Font,
+                WarningText.TextSize,
+                WarningText.AbsoluteSize.X
+            )
+
+            local YBox = 24 + YText
+            if Tab.WarningBox.LockSize == true and YBox >= MaximumSize then
+                WarningBoxScrollingFrame.CanvasSize = UDim2.fromOffset(0, YBox)
+                YBox = MaximumSize
+            else
+                WarningBoxScrollingFrame.CanvasSize = UDim2.fromOffset(0, 0)
+            end
+
+            WarningText.Size = UDim2.new(1, -4, 0, YText)
+            WarningBox.Size = UDim2.new(1, -5, 0, YBox + 4)
+        end
+
+        Tab:RefreshSides()
+    end
+
+    local function AddTabbox(self, Info)
+        Info = Library:Validate(Info, Templates.Tabbox)
+        local ParentObj = self
+
+        if typeof(Info.Side) == "string" then
+            local lowerSide = string.lower(Info.Side)
+            if not SideIndex[lowerSide] then
+                error(string.format("Invalid side: %s", Info.Side))
+            end
+
+            Info.Side = SideIndex[lowerSide]
+        end
+
+        local BoxHolder = New("Frame", {
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            Size = UDim2.fromScale(1, 0),
+            Parent = if ParentObj.Type == "Groupbox" then ParentObj.Container else (Info.Side == 1 and TabLeft or TabRight),
+        })
+        New("UIListLayout", {
+            Padding = UDim.new(0, 6),
+            Parent = BoxHolder,
+        })
+        New("UIPadding", {
+            PaddingBottom = UDim.new(0, 4),
+            PaddingTop = UDim.new(0, 4),
+            Parent = BoxHolder,
+        })
+
+        local TabboxHolder
+        local TabboxButtons
+
+        do
+            TabboxHolder = New("Frame", {
+                BackgroundColor3 = "BackgroundColor",
+                Size = UDim2.fromScale(1, 0),
+                Parent = BoxHolder,
             })
             table.insert(
                 Library.Corners,
                 New("UICorner", {
                     CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                    Parent = WarningBox,
+                    Parent = TabboxHolder,
                 })
             )
-            WarningBoxOutline, WarningBoxShadowOutline = Library:AddOutline(WarningBox)
-            Library:AddToRegistry(WarningBoxOutline, {
-                Color = function()
-                    return Tab.WarningBox.IsNormal == true and Library.Scheme.OutlineColor or Color3.fromRGB(255, 50, 50)
-                end
-            })
-            Library:AddToRegistry(WarningBoxShadowOutline, {
-                Color = function()
-                    return Tab.WarningBox.IsNormal == true and Library.Scheme.DarkColor or Color3.fromRGB(85, 0, 0)
-                end
-            })
+            Library:AddOutline(TabboxHolder)
 
-            WarningBoxScrollingFrame = New("ScrollingFrame", {
+            TabboxButtons = New("Frame", {
                 BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                Size = UDim2.fromScale(1, 1),
-                CanvasSize = UDim2.new(0, 0, 0, 0),
-                ScrollBarThickness = 3,
-                ScrollingDirection = Enum.ScrollingDirection.Y,
-                Parent = WarningBox,
-            })
-            New("UIPadding", {
-                PaddingBottom = UDim.new(0, 4),
-                PaddingLeft = UDim.new(0, 6),
-                PaddingRight = UDim.new(0, 6),
-                PaddingTop = UDim.new(0, 4),
-                Parent = WarningBoxScrollingFrame,
-            })
-
-            WarningTitle = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Size = UDim2.new(1, -4, 0, 14),
-                Text = "",
-                TextColor3 = Color3.fromRGB(255, 50, 50),
-                TextSize = 14,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = WarningBoxScrollingFrame,
-            })
-            Library:AddToRegistry(WarningTitle, {
-                TextColor3 = function()
-                    return Tab.WarningBox.IsNormal == true and Library.Scheme.FontColor or Color3.fromRGB(255, 50, 50)
-                end
-            })
-
-            WarningStroke = New("UIStroke", {
-                ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
-                Color = Color3.fromRGB(169, 0, 0),
-                LineJoinMode = Enum.LineJoinMode.Miter,
-                Parent = WarningTitle,
-            })
-            Library:AddToRegistry(WarningStroke, {
-                Color = function()
-                    return Tab.WarningBox.IsNormal == true and Library.Scheme.OutlineColor or Color3.fromRGB(169, 0, 0)
-                end
-            })
-
-            WarningText = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Position = UDim2.fromOffset(0, 16),
-                Size = UDim2.new(1, -4, 0, 0),
-                Text = "",
-                TextSize = 14,
-                TextWrapped = true,
-                Parent = WarningBoxScrollingFrame,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextYAlignment = Enum.TextYAlignment.Top,
-            })
-
-            New("UIStroke", {
-                ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
-                Color = "DarkColor",
-                LineJoinMode = Enum.LineJoinMode.Miter,
-                Parent = WarningText,
-            })
-        end
-
-        --// Tab Handlers \\--
-        function Tab:UpdateWarningBox(Info)
-            if typeof(Info.IsNormal) == "boolean" then
-                Tab.WarningBox.IsNormal = Info.IsNormal
-            end
-            if typeof(Info.LockSize) == "boolean" then
-                Tab.WarningBox.LockSize = Info.LockSize
-            end
-            if typeof(Info.Visible) == "boolean" then
-                Tab.WarningBox.Visible = Info.Visible
-            end
-            if typeof(Info.Title) == "string" then
-                Tab.WarningBox.Title = Info.Title
-            end
-            if typeof(Info.Text) == "string" then
-                Tab.WarningBox.Text = Info.Text
-            end
-
-            WarningBoxHolder.Visible = Tab.WarningBox.Visible
-            WarningTitle.Text = Tab.WarningBox.Title
-            WarningText.Text = Tab.WarningBox.Text
-            Tab:Resize(true)
-
-            WarningBox.BackgroundColor3 = Library.Registry[WarningBox].BackgroundColor3()
-            WarningBoxShadowOutline.Color = Library.Registry[WarningBoxShadowOutline].Color()
-            WarningBoxOutline.Color = Library.Registry[WarningBoxOutline].Color()
-            WarningTitle.TextColor3 = Library.Registry[WarningTitle].TextColor3()
-            WarningStroke.Color = Library.Registry[WarningStroke].Color()
-        end
-
-        function Tab:RefreshSides()
-            local Offset = WarningBoxHolder.Visible and WarningBox.Size.Y.Offset + 8 or 0
-            for _, Side in Tab.Sides do
-                Side.Position = UDim2.new(Side.Position.X.Scale, 0, 0, Offset)
-                Side.Size = UDim2.new(0.5, -3, 1, -Offset)
-            end
-        end
-
-        function Tab:Resize(ResizeWarningBox: boolean?)
-            if ResizeWarningBox then
-                local MaximumSize = math.floor(TabContainer.AbsoluteSize.Y / 3.25)
-                local _, YText = Library:GetTextBounds(
-                    WarningText.Text,
-                    Library.Scheme.Font,
-                    WarningText.TextSize,
-                    WarningText.AbsoluteSize.X
-                )
-
-                local YBox = 24 + YText
-                if Tab.WarningBox.LockSize == true and YBox >= MaximumSize then
-                    WarningBoxScrollingFrame.CanvasSize = UDim2.fromOffset(0, YBox)
-                    YBox = MaximumSize
-                else
-                    WarningBoxScrollingFrame.CanvasSize = UDim2.fromOffset(0, 0)
-                end
-
-                WarningText.Size = UDim2.new(1, -4, 0, YText)
-                WarningBox.Size = UDim2.new(1, -5, 0, YBox + 4)
-            end
-
-            Tab:RefreshSides()
-        end
-
-        local function AddTabbox(self, Info)
-            Info = Library:Validate(Info, Templates.Tabbox)
-            local ParentObj = self
-
-            if typeof(Info.Side) == "string" then
-                local lowerSide = string.lower(Info.Side)
-                if not SideIndex[lowerSide] then
-                    error(string.format("Invalid side: %s", Info.Side))
-                end
-
-                Info.Side = SideIndex[lowerSide]
-            end
-
-            local BoxHolder = New("Frame", {
-                AutomaticSize = Enum.AutomaticSize.Y,
-                BackgroundTransparency = 1,
-                Size = UDim2.fromScale(1, 0),
-                Parent = if ParentObj.Type == "Groupbox" then ParentObj.Container else (Info.Side == 1 and TabLeft or TabRight),
+                Size = UDim2.new(1, 0, 0, 34),
+                Parent = TabboxHolder,
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 6),
-                Parent = BoxHolder,
+                FillDirection = Enum.FillDirection.Horizontal,
+                HorizontalFlex = Enum.UIFlexAlignment.Fill,
+                Parent = TabboxButtons,
             })
-            New("UIPadding", {
-                PaddingBottom = UDim.new(0, 4),
-                PaddingTop = UDim.new(0, 4),
-                Parent = BoxHolder,
+        end
+
+        local TotalTabs = 0
+        local FirstTab
+        local LastTab
+
+        local Tabbox: any = {
+            Type = "Tabbox",
+
+            Connections = {},
+            Destroyed = false,
+
+            Visible = true,
+            ActiveTab = nil,
+
+            BoxHolder = BoxHolder,
+            Holder = TabboxHolder,
+            Tabs = {},
+
+            ParentBox = if ParentObj.Type == "Groupbox" then ParentObj else nil,
+        }
+
+        function Tabbox:UpdateCorners()
+            for _, Tab in Tabbox.Tabs do
+                Tab:UpdateCorners()
+            end
+        end
+
+        function Tabbox:Resize()
+            if Tabbox.ActiveTab then
+                Tabbox.ActiveTab:Resize()
+            end
+        end
+
+        function Tabbox:AddTab(Name, IconName)
+            TotalTabs = TotalTabs + 1
+            local TabIndex = TotalTabs
+
+            LastTab = TabIndex
+            if not FirstTab then
+                FirstTab = TabIndex
+            end
+
+            local IsNameEmpty = Name == nil or Trim(tostring(Name)) == ""
+            local TabStoringIndex = IsNameEmpty and tostring(TabIndex) or Name
+
+            local Button = New("TextButton", {
+                BackgroundColor3 = "MainColor",
+                BackgroundTransparency = 0,
+                Size = UDim2.fromOffset(0, 34),
+                Text = "",
+                Parent = TabboxButtons,
             })
 
-            local TabboxHolder
-            local TabboxButtons
+            local ButtonCorner = New("UICorner", {
+                TopLeftRadius = UDim.new(0, WindowInfo.CornerRadius),
+                TopRightRadius = UDim.new(0, WindowInfo.CornerRadius),
+                BottomRightRadius = UDim.new(0, 0),
+                BottomLeftRadius = UDim.new(0, 0),
+                Parent = Button,
+            }); table.insert(Library.SpecificCorners, ButtonCorner)
 
-            do
-                TabboxHolder = New("Frame", {
-                    BackgroundColor3 = "BackgroundColor",
-                    Size = UDim2.fromScale(1, 0),
-                    Parent = BoxHolder,
-                })
-                table.insert(
-                    Library.Corners,
-                    New("UICorner", {
-                        CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                        Parent = TabboxHolder,
-                    })
-                )
-                Library:AddOutline(TabboxHolder)
+            local ButtonContent = New("Frame", {
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundTransparency = 1,
+                Position = UDim2.fromScale(0.5, 0.5),
+                Size = UDim2.fromOffset(0, 16),
+                Parent = Button,
+            })
+            New("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal,
+                HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                VerticalAlignment = Enum.VerticalAlignment.Center,
+                Padding = UDim.new(0, 8),
+                Parent = ButtonContent,
+            })
 
-                TabboxButtons = New("Frame", {
-                    BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 34),
-                    Parent = TabboxHolder,
-                })
-                New("UIListLayout", {
-                    FillDirection = Enum.FillDirection.Horizontal,
-                    HorizontalFlex = Enum.UIFlexAlignment.Fill,
-                    Parent = TabboxButtons,
-                })
-            end
-
-            local TotalTabs = 0
-            local FirstTab
-            local LastTab
-
-            local Tabbox: any = {
-                Type = "Tabbox",
-
-                Connections = {},
-                Destroyed = false,
-
-                Visible = true,
-                ActiveTab = nil,
-
-                BoxHolder = BoxHolder,
-                Holder = TabboxHolder,
-                Tabs = {},
-
-                ParentBox = if ParentObj.Type == "Groupbox" then ParentObj else nil,
-            }
-
-            function Tabbox:UpdateCorners()
-                for _, Tab in Tabbox.Tabs do
-                    Tab:UpdateCorners()
-                end
-            end
-
-            function Tabbox:Resize()
-                if Tabbox.ActiveTab then
-                    Tabbox.ActiveTab:Resize()
-                end
-            end
-
-            function Tabbox:AddTab(Name, IconName)
-                TotalTabs = TotalTabs + 1
-                local TabIndex = TotalTabs
-
-                LastTab = TabIndex
-                if not FirstTab then
-                    FirstTab = TabIndex
-                end
-
-                local IsNameEmpty = Name == nil or Trim(tostring(Name)) == ""
-                local TabStoringIndex = IsNameEmpty and tostring(TabIndex) or Name
-
-                local Button = New("TextButton", {
-                    BackgroundColor3 = "MainColor",
-                    BackgroundTransparency = 0,
-                    Size = UDim2.fromOffset(0, 34),
-                    Text = "",
-                    Parent = TabboxButtons,
-                })
-
-                local ButtonCorner = New("UICorner", {
-                    TopLeftRadius = UDim.new(0, WindowInfo.CornerRadius),
-                    TopRightRadius = UDim.new(0, WindowInfo.CornerRadius),
-                    BottomRightRadius = UDim.new(0, 0),
-                    BottomLeftRadius = UDim.new(0, 0),
-                    Parent = Button,
-                }); table.insert(Library.SpecificCorners, ButtonCorner)
-
-                local ButtonContent = New("Frame", {
-                    AnchorPoint = Vector2.new(0.5, 0.5),
-                    AutomaticSize = Enum.AutomaticSize.X,
-                    BackgroundTransparency = 1,
-                    Position = UDim2.fromScale(0.5, 0.5),
-                    Size = UDim2.fromOffset(0, 16),
-                    Parent = Button,
-                })
-                New("UIListLayout", {
-                    FillDirection = Enum.FillDirection.Horizontal,
-                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
-                    VerticalAlignment = Enum.VerticalAlignment.Center,
-                    Padding = UDim.new(0, 8),
+            local ButtonIcon
+            local BoxIcon = Library:GetCustomIcon(IconName)
+            if BoxIcon then
+                ButtonIcon = New("ImageLabel", {
+                    ImageColor3 = BoxIcon.Custom and "WhiteColor" or "AccentColor",
+                    ImageTransparency = 0.5,
+                    Size = IsNameEmpty and UDim2.fromOffset(16, 16) or UDim2.fromOffset(18, 18),
                     Parent = ButtonContent,
                 })
+                Library:ApplyLucideIcon(ButtonIcon, BoxIcon)
+            end
 
-                local ButtonIcon
-                local BoxIcon = Library:GetCustomIcon(IconName)
-                if BoxIcon then
-                    ButtonIcon = New("ImageLabel", {
-                        ImageColor3 = BoxIcon.Custom and "WhiteColor" or "AccentColor",
-                        ImageTransparency = 0.5,
-                        Size = IsNameEmpty and UDim2.fromOffset(16, 16) or UDim2.fromOffset(18, 18),
-                        Parent = ButtonContent,
-                    })
-                    Library:ApplyLucideIcon(ButtonIcon, BoxIcon)
-                end
-
-                local ButtonLabel
-                if not IsNameEmpty then
-                    ButtonLabel = New("TextLabel", {
-                        AutomaticSize = Enum.AutomaticSize.X,
-                        BackgroundTransparency = 1,
-                        Size = UDim2.fromOffset(0, 16),
-                        Text = Name,
-                        TextSize = 15,
-                        TextTransparency = 0.5,
-                        Parent = ButtonContent,
-                    })
-                end
-
-                local Line = Library:MakeLine(Button, {
-                    AnchorPoint = Vector2.new(0, 1),
-                    Position = UDim2.new(0, 0, 1, 1),
-                    Size = UDim2.new(1, 0, 0, 1),
-                })
-
-                local Container = New("ScrollingFrame", {
-                    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            local ButtonLabel
+            if not IsNameEmpty then
+                ButtonLabel = New("TextLabel", {
+                    AutomaticSize = Enum.AutomaticSize.X,
                     BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    CanvasSize = UDim2.fromScale(0, 0),
-                    Position = UDim2.fromOffset(0, 35),
-                    ScrollBarThickness = 0,
-                    Size = UDim2.new(1, 0, 1, -35),
-                    Visible = false,
-                    Parent = TabboxHolder,
+                    Size = UDim2.fromOffset(0, 16),
+                    Text = Name,
+                    TextSize = 15,
+                    TextTransparency = 0.5,
+                    Parent = ButtonContent,
                 })
-                local List = New("UIListLayout", {
-                    Padding = UDim.new(0, 8),
-                    Parent = Container,
-                })
-                New("UIPadding", {
-                    PaddingBottom = UDim.new(0, 7),
-                    PaddingLeft = UDim.new(0, 7),
-                    PaddingRight = UDim.new(0, 7),
-                    PaddingTop = UDim.new(0, 7),
-                    Parent = Container,
-                })
-
-                local Tab = {
-                    Name = Name,
-
-                    Connections = {},
-                    Destroyed = false,
-
-                    ButtonHolder = Button,
-                    Container = Container,
-                    ButtonCorner = ButtonCorner,
-
-                    Tab = Tab,
-                    Tabbox = Tabbox,
-
-                    Elements = {},
-                    DependencyBoxes = {},
-                }
-
-                function Tab:Show()
-                    if Tabbox.ActiveTab then
-                        Tabbox.ActiveTab:Hide()
-                    end
-
-                    Button.BackgroundTransparency = 1
-
-                    if ButtonLabel then
-                        ButtonLabel.TextTransparency = 0
-                    end
-                    if ButtonIcon then
-                        ButtonIcon.ImageTransparency = 0
-                    end
-
-                    Line.Visible = false
-
-                    Container.Visible = true
-
-                    Tabbox.ActiveTab = Tab
-                    Tab:Resize()
-                    Tabbox:RefreshPopOutPlaceholder()
-                end
-
-                function Tab:Hide()
-                    Button.BackgroundTransparency = 0
-
-                    if ButtonLabel then
-                        ButtonLabel.TextTransparency = 0.5
-                    end
-                    if ButtonIcon then
-                        ButtonIcon.ImageTransparency = 0.5
-                    end
-                    Line.Visible = true
-                    Container.Visible = false
-
-                    Tabbox.ActiveTab = nil
-                end
-
-                function Tab:Resize()
-                    if Tabbox.ActiveTab ~= Tab then
-                        return
-                    end
-
-                    local ContentSize = (List.AbsoluteContentSize.Y / Library.DPIScale) + 14
-                    if Tabbox.PoppedOut then
-                        ContentSize = math.min(ContentSize, GetPopOutBodyMaxHeight(Tabbox, 35))
-                    end
-
-                    TabboxHolder.Size = UDim2.new(1, 0, 0, ContentSize + 35)
-                    if ParentObj.Type == "Groupbox" then
-                        ParentObj:Resize()
-                    end
-                end
-
-                function Tab:UpdateCorners()
-                    local Radius = WindowInfo.CornerRadius
-
-                    ButtonCorner.TopLeftRadius = UDim.new(0, TabIndex == FirstTab and Radius or 0)
-                    ButtonCorner.TopRightRadius = UDim.new(0, TabIndex == LastTab and Radius or 0)
-                end
-
-                function Tab:Destroy()
-                    Tab.Destroyed = true
-
-                    if Tab.Connections then
-                        for _, Connection in Tab.Connections do
-                            Connection:Disconnect()
-                        end
-                    end
-
-                    for _, Element in Tab.Elements do
-                        if Element.Destroy then
-                            Element:Destroy()
-                        end
-                    end
-
-                    for _, SubDepbox in Tab.DependencyBoxes do
-                        if SubDepbox.Destroy then
-                            SubDepbox:Destroy()
-                        end
-                    end
-
-                    if Container then
-                        Container:Destroy()
-                    end
-
-                    if Button then
-                        Button:Destroy()
-                    end
-                end
-
-                --// Execution \\--
-                if not Tabbox.ActiveTab then
-                    Tab:Show()
-                end
-
-                Button.MouseButton1Click:Connect(Tab.Show)
-
-                setmetatable(Tab, BaseGroupbox)
-
-                Tabbox.Tabs[TabStoringIndex] = Tab
-                Tabbox:UpdateCorners()
-
-                return Tab, TabStoringIndex
             end
 
-            Library:MakeBoxPopOut(Tabbox, {
-                Enabled = Info.PopOut ~= false,
-
-                Header = TabboxButtons,
-                Children = function()
-                    return { TabboxHolder }
-                end,
-
-                After = function()
-                    if Tabbox.ActiveTab then
-                        Tabbox.ActiveTab:Resize()
-                    end
-                    if ParentObj.Type == "Groupbox" then
-                        ParentObj:Resize()
-                    end
-                end,
+            local Line = Library:MakeLine(Button, {
+                AnchorPoint = Vector2.new(0, 1),
+                Position = UDim2.new(0, 0, 1, 1),
+                Size = UDim2.new(1, 0, 0, 1),
             })
 
-            function Tabbox:Destroy()
-                if Tabbox.PoppedOut then
-                    Tabbox:SetPoppedOut(false)
-                end
-
-                Tabbox.Destroyed = true
-
-                if Tabbox.Connections then
-                    for _, Connection in Tabbox.Connections do
-                        Connection:Disconnect()
-                    end
-                end
-
-                for _, Tab in Tabbox.Tabs do
-                    if Tab.Destroy then
-                        Tab:Destroy()
-                    end
-                end
-
-                if TabboxHolder then
-                    TabboxHolder:Destroy()
-                end
-
-                if BoxHolder then
-                    BoxHolder:Destroy()
-                end
-            end
-
-            if Info.Name then
-                Tab.Tabboxes[Info.Name] = Tabbox
-            else
-                table.insert(Tab.Tabboxes, Tabbox)
-            end
-
-            return Tabbox
-        end
-
-        Tab.AddTabbox = AddTabbox
-
-        --// Deprecated - Use Tab:AddTabbox instead.
-        function Tab:AddLeftTabbox(Name)
-            return Tab:AddTabbox({ Side = 1, Name = Name })
-        end
-
-        --// Deprecated - Use Tab:AddTabbox instead.
-        function Tab:AddRightTabbox(Name)
-            return Tab:AddTabbox({ Side = 2, Name = Name })
-        end
-
-        function Tab:AddGroupbox(Info)
-            Info = Library:Validate(Info, Templates.Groupbox)
-
-            if typeof(Info.Side) == "string" then
-                local lowerSide = string.lower(Info.Side)
-                if not SideIndex[lowerSide] then
-                    error(string.format("Invalid side: %s", Info.Side))
-                end
-
-                Info.Side = SideIndex[lowerSide]
-            end
-
-            local BoxHolder = New("Frame", {
-                AutomaticSize = Enum.AutomaticSize.Y,
+            local Container = New("ScrollingFrame", {
+                AutomaticCanvasSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
-                Size = UDim2.fromScale(1, 0),
-                Parent = (Info.Side == 1) and TabLeft or TabRight,
+                BorderSizePixel = 0,
+                CanvasSize = UDim2.fromScale(0, 0),
+                Position = UDim2.fromOffset(0, 35),
+                ScrollBarThickness = 0,
+                Size = UDim2.new(1, 0, 1, -35),
+                Visible = false,
+                Parent = TabboxHolder,
             })
-            New("UIListLayout", {
-                Padding = UDim.new(0, 6),
-                Parent = BoxHolder,
+            local List = New("UIListLayout", {
+                Padding = UDim.new(0, 8),
+                Parent = Container,
             })
             New("UIPadding", {
-                PaddingBottom = UDim.new(0, 4),
-                PaddingTop = UDim.new(0, 4),
-                Parent = BoxHolder,
+                PaddingBottom = UDim.new(0, 7),
+                PaddingLeft = UDim.new(0, 7),
+                PaddingRight = UDim.new(0, 7),
+                PaddingTop = UDim.new(0, 7),
+                Parent = Container,
             })
 
-            local GroupboxHolder
-
-            local GroupboxTop
-            local GroupboxLabel
-            local GroupboxDescription
-
-            local GroupboxContainer
-            local GroupboxList
-
-            local GroupboxCollapseArrow
-            local GroupboxLine
-
-            do
-                GroupboxHolder = New("Frame", {
-                    BackgroundColor3 = "BackgroundColor",
-                    Size = UDim2.fromScale(1, 0),
-                    Parent = BoxHolder,
-                })
-                table.insert(
-                    Library.Corners,
-                    New("UICorner", {
-                        CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                        Parent = GroupboxHolder,
-                    })
-                )
-                New("UIListLayout", {
-                    Parent = GroupboxHolder,
-                })
-                Library:AddOutline(GroupboxHolder)
-
-                GroupboxTop = New("Frame", {
-                    AutomaticSize = Enum.AutomaticSize.Y,
-                    BackgroundTransparency = 1,
-                    Size = UDim2.fromScale(1, 0),
-                    Parent = GroupboxHolder,
-                })
-                New("UIPadding", {
-                    PaddingBottom = UDim.new(0, 6),
-                    PaddingLeft = UDim.new(0, 6),
-                    PaddingRight = UDim.new(0, 6),
-                    PaddingTop = UDim.new(0, 6),
-                    Parent = GroupboxTop,
-                })
-
-                local BoxIcon = Library:GetCustomIcon(Info.IconName)
-                if BoxIcon then
-                    local GroupboxHeaderIcon = New("ImageLabel", {
-                        AnchorPoint = Vector2.new(0, 0.5),
-                        ImageColor3 = BoxIcon.Custom and "WhiteColor" or "AccentColor",
-                        Position = UDim2.fromScale(0, 0.5),
-                        Size = UDim2.fromOffset(22, 22),
-                        Parent = GroupboxTop,
-                    })
-                    Library:ApplyLucideIcon(GroupboxHeaderIcon, BoxIcon)
-                end
-
-                local RightInset = if Info.DisableCollapsing ~= true then 22 else 0
-                local TextsFrame = New("Frame", {
-                    AutomaticSize = Enum.AutomaticSize.Y,
-                    BackgroundTransparency = 1,
-                    Position = UDim2.fromOffset(BoxIcon and 24 or 0, 0),
-                    Size = UDim2.new(1, -RightInset - (BoxIcon and 24 or 0), 0, 0),
-                    Parent = GroupboxTop,
-                })
-                New("UIListLayout", {
-                    Parent = TextsFrame,
-                })
-                New("UIPadding", {
-                    PaddingBottom = UDim.new(0, 3),
-                    PaddingLeft = UDim.new(0, 6),
-                    PaddingRight = UDim.new(0, 6),
-                    PaddingTop = UDim.new(0, 3),
-                    Parent = TextsFrame,
-                })
-
-                GroupboxLabel = New("TextLabel", {
-                    AutomaticSize = Enum.AutomaticSize.Y,
-                    BackgroundTransparency = 1,
-                    Size = UDim2.fromScale(1, 0),
-                    Text = Info.Name,
-                    TextSize = 15,
-                    TextWrapped = true,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    Parent = TextsFrame,
-                })
-                New("UIPadding", {
-                    PaddingBottom = UDim.new(0, 1),
-                    Parent = GroupboxLabel,
-                })
-
-                GroupboxDescription = New("TextLabel", {
-                    AutomaticSize = Enum.AutomaticSize.Y,
-                    BackgroundTransparency = 1,
-                    Size = UDim2.fromScale(1, 0),
-                    Text = Info.Description or "",
-                    TextSize = 14,
-                    TextTransparency = 0.5,
-                    TextWrapped = true,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    Visible = (Info.Description ~= nil),
-                    Parent = TextsFrame,
-                })
-
-                GroupboxCollapseArrow = New("ImageButton", {
-                    Visible = Info.DisableCollapsing ~= true,
-                    AnchorPoint = Vector2.new(1, 0.5),
-                    BackgroundTransparency = 1,
-                    ImageColor3 = "WhiteColor",
-                    Position = UDim2.fromScale(1, 0.5),
-                    Size = UDim2.fromOffset(22, 22),
-                    Parent = GroupboxTop,
-                })
-                if ArrowIcon then
-                    Library:ApplyLucideIcon(GroupboxCollapseArrow, ArrowIcon, 180)
-                end
-
-                GroupboxLine = Library:MakeLine(GroupboxHolder, {
-                    LayoutOrder = 1,
-                    Size = UDim2.new(1, 0, 0, 1),
-                })
-
-                GroupboxContainer = New("ScrollingFrame", {
-                    AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                    BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    CanvasSize = UDim2.fromScale(0, 0),
-                    LayoutOrder = 2,
-                    ScrollBarThickness = 0,
-                    Size = UDim2.fromScale(1, 0),
-                    Parent = GroupboxHolder,
-                })
-
-                GroupboxList = New("UIListLayout", {
-                    Padding = UDim.new(0, 8),
-                    Parent = GroupboxContainer,
-                })
-                New("UIPadding", {
-                    PaddingBottom = UDim.new(0, 7),
-                    PaddingLeft = UDim.new(0, 7),
-                    PaddingRight = UDim.new(0, 7),
-                    PaddingTop = UDim.new(0, 7),
-                    Parent = GroupboxContainer,
-                })
-            end
-
-            local Groupbox: any = {
-                Type = "Groupbox",
-
-                Name = Info.Name,
-                Description = Info.Description,
+            local Tab = {
+                Name = Name,
 
                 Connections = {},
                 Destroyed = false,
 
-                Visible = true,
-                Collapsed = false,
-
-                BoxHolder = BoxHolder,
-                Holder = GroupboxHolder,
-                Container = GroupboxContainer,
+                ButtonHolder = Button,
+                Container = Container,
+                ButtonCorner = ButtonCorner,
 
                 Tab = Tab,
+                Tabbox = Tabbox,
+
+                Elements = {},
                 DependencyBoxes = {},
-                Elements = {}
             }
 
-            local ResizeTween
-            local CollapseArrowTween
-
-            function Groupbox:Resize()
-                if ResizeTween then
-                    StopTween(ResizeTween, true)
-                    ResizeTween = nil
+            function Tab:Show()
+                if Tabbox.ActiveTab then
+                    Tabbox.ActiveTab:Hide()
                 end
 
-                local TopSize = (GroupboxTop.AbsoluteSize.Y / Library.DPIScale)
-                local ContainerSize = (GroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 14
-                if Groupbox.PoppedOut then
-                    ContainerSize = math.min(ContainerSize, GetPopOutBodyMaxHeight(Groupbox, TopSize + 1))
+                Button.BackgroundTransparency = 1
+
+                if ButtonLabel then
+                    ButtonLabel.TextTransparency = 0
+                end
+                if ButtonIcon then
+                    ButtonIcon.ImageTransparency = 0
                 end
 
-                local TargetSize = UDim2.new(1, 0, 0, if Groupbox.Collapsed then TopSize else (TopSize + 1 + ContainerSize))
-                GroupboxContainer.Size = UDim2.new(1, 0, 0, ContainerSize)
-                GroupboxLine.Visible = not Groupbox.Collapsed
+                Line.Visible = false
 
-                if Library.Animations and Library.Animations.Groupbox then
-                    local TweenInfo = Library.GroupboxTweenInfo or TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                    local Tween = TweenService:Create(GroupboxHolder, TweenInfo, { Size = TargetSize })
-                    ResizeTween = Tween
+                Container.Visible = true
 
-                    local Connection; Connection = Library:GiveSignal(Tween.Completed:Once(function()
-                        if Connection then
-                            Connection:Disconnect()
-                        end
+                Tabbox.ActiveTab = Tab
+                Tab:Resize()
+                Tabbox:RefreshPopOutPlaceholder()
+            end
 
-                        if ResizeTween == Tween then
-                            StopTween(ResizeTween, true)
-                            ResizeTween = nil
-                        end
-                    end))
+            function Tab:Hide()
+                Button.BackgroundTransparency = 0
 
-                    Tween:Play()
-                else
-                    GroupboxHolder.Size = TargetSize
+                if ButtonLabel then
+                    ButtonLabel.TextTransparency = 0.5
+                end
+                if ButtonIcon then
+                    ButtonIcon.ImageTransparency = 0.5
+                end
+                Line.Visible = true
+                Container.Visible = false
+
+                Tabbox.ActiveTab = nil
+            end
+
+            function Tab:Resize()
+                if Tabbox.ActiveTab ~= Tab then
+                    return
+                end
+
+                local ContentSize = (List.AbsoluteContentSize.Y / Library.DPIScale) + 14
+                if Tabbox.PoppedOut then
+                    ContentSize = math.min(ContentSize, GetPopOutBodyMaxHeight(Tabbox, 35))
+                end
+
+                TabboxHolder.Size = UDim2.new(1, 0, 0, ContentSize + 35)
+                if ParentObj.Type == "Groupbox" then
+                    ParentObj:Resize()
                 end
             end
 
-            function Groupbox:SetDescription(Description: string | nil)
-                GroupboxDescription.Text = Description or ""
-                GroupboxDescription.Visible = (Description ~= nil)
+            function Tab:UpdateCorners()
+                local Radius = WindowInfo.CornerRadius
 
-                Groupbox:Resize()
+                ButtonCorner.TopLeftRadius = UDim.new(0, TabIndex == FirstTab and Radius or 0)
+                ButtonCorner.TopRightRadius = UDim.new(0, TabIndex == LastTab and Radius or 0)
             end
 
-            function Groupbox:SetCollapsed(Collapsed: boolean)
-                if Info.DisableCollapsing == true then return end
-                Groupbox.Collapsed = Collapsed
+            function Tab:Destroy()
+                Tab.Destroyed = true
 
-                if CollapseArrowTween then
-                    StopTween(CollapseArrowTween, true)
-                    CollapseArrowTween = nil
-                end
-
-                local TargetRotation = if Collapsed then 0 else 180
-
-                GroupboxContainer.Visible = not Collapsed
-                if Library.Animations and Library.Animations.Groupbox then
-                    local TweenInfo = Library.GroupboxTweenInfo or TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-                    local Tween = TweenService:Create(GroupboxCollapseArrow, TweenInfo, { Rotation = TargetRotation })
-                    CollapseArrowTween = Tween
-
-                    local Connection; Connection = Library:GiveSignal(Tween.Completed:Connect(function()
-                        if Connection then
-                            Connection:Disconnect()
-                        end
-
-                        if CollapseArrowTween == Tween then
-                            StopTween(CollapseArrowTween, true)
-                            CollapseArrowTween = nil
-                        end
-                    end))
-
-                    Tween:Play()
-                else
-                    GroupboxCollapseArrow.Rotation = TargetRotation
-                end
-
-                Groupbox:Resize()
-            end
-
-            function Groupbox:ToggleCollapsed()
-                if Info.DisableCollapsing == true then return end
-                Groupbox:SetCollapsed(not Groupbox.Collapsed)
-            end
-
-            Library:MakeBoxPopOut(Groupbox, {
-                Enabled = Info.PopOut ~= false,
-
-                Header = GroupboxTop,
-                Children = function()
-                    local Children = {}
-                    for _, Child in BoxHolder:GetChildren() do
-                        if Child:IsA("GuiObject") and Child ~= Groupbox.PopOutPlaceholder then
-                            table.insert(Children, Child)
-                        end
-                    end
-                    return Children
-                end,
-
-                Before = function()
-                    GroupboxCollapseArrow.Visible = false
-                end,
-                After = function()
-                    GroupboxCollapseArrow.Visible = Info.DisableCollapsing ~= true
-                    Groupbox:Resize()
-                end
-            })
-
-            function Groupbox:Destroy()
-                if Groupbox.PoppedOut then
-                    Groupbox:SetPoppedOut(false)
-                end
-
-                Groupbox.Destroyed = true
-
-                if ResizeTween then
-                    StopTween(ResizeTween, true)
-                    ResizeTween = nil
-                end
-
-                if CollapseArrowTween then
-                    StopTween(CollapseArrowTween, true)
-                    CollapseArrowTween = nil
-                end
-
-                if Groupbox.Connections then
-                    for _, Connection in Groupbox.Connections do
+                if Tab.Connections then
+                    for _, Connection in Tab.Connections do
                         Connection:Disconnect()
                     end
                 end
 
-                for _, Element in Groupbox.Elements do
+                for _, Element in Tab.Elements do
                     if Element.Destroy then
                         Element:Destroy()
                     end
                 end
-                table.clear(Groupbox.Elements)
 
-                for _, SubDepbox in Groupbox.DependencyBoxes do
+                for _, SubDepbox in Tab.DependencyBoxes do
                     if SubDepbox.Destroy then
                         SubDepbox:Destroy()
                     end
                 end
-                table.clear(Groupbox.DependencyBoxes)
 
-                if GroupboxHolder then
-                    GroupboxHolder:Destroy()
+                if Container then
+                    Container:Destroy()
                 end
 
-                if BoxHolder then
-                    BoxHolder:Destroy()
-                end
-            end
-
-            function Groupbox:SetVisible(Visible: boolean)
-                Groupbox.Visible = Visible
-                BoxHolder.Visible = Visible
-                SyncPopOutVisibility(Groupbox)
-
-                if Visible == true and Library.Searching then
-                    Library:UpdateSearch(Library.SearchText)
+                if Button then
+                    Button:Destroy()
                 end
             end
 
-            function Groupbox:Show()
-                Groupbox:SetVisible(true)
+            --// Execution \\--
+            if not Tabbox.ActiveTab then
+                Tab:Show()
             end
 
-            function Groupbox:Hide()
-                Groupbox:SetVisible(false)
-            end
+            Button.MouseButton1Click:Connect(Tab.Show)
 
-            if Info.DisableCollapsing ~= true then
-                GroupboxCollapseArrow.MouseButton1Click:Connect(function()
-                    Groupbox:ToggleCollapsed()
-                end)
-            end
+            setmetatable(Tab, BaseGroupbox)
 
-            Groupbox.AddTabbox = AddTabbox
-            setmetatable(Groupbox, BaseGroupbox)
+            Tabbox.Tabs[TabStoringIndex] = Tab
+            Tabbox:UpdateCorners()
 
-            Groupbox:Resize()
-            Tab.Groupboxes[Info.Name] = Groupbox
-
-            if Info.Visible == false then
-                Groupbox:Hide()
-            end
-
-            if Info.DisableCollapsing ~= true and Info.Collapsed == true then
-                Groupbox:SetCollapsed(true)
-            end
-
-            return Groupbox
+            return Tab, TabStoringIndex
         end
 
-        --// Deprecated - Use Tab:AddGroupbox instead.
-        function Tab:AddLeftGroupbox(Name, IconName, Visible, Collapsed, DisableCollapsing)
-            return Tab:AddGroupbox({ Side = 1, Name = Name, IconName = IconName, Visible = Visible, Collapsed = Collapsed, DisableCollapsing = DisableCollapsing })
-        end
+        Library:MakeBoxPopOut(Tabbox, {
+            Enabled = Info.PopOut ~= false,
 
-        --// Deprecated - Use Tab:AddGroupbox instead.
-        function Tab:AddRightGroupbox(Name, IconName, Visible, Collapsed, DisableCollapsing)
-            return Tab:AddGroupbox({ Side = 2, Name = Name, IconName = IconName, Visible = Visible, Collapsed = Collapsed, DisableCollapsing = DisableCollapsing })
-        end
+            Header = TabboxButtons,
+            Children = function()
+                return { TabboxHolder }
+            end,
 
-        function Tab:Hover(Hovering)
-            if Library.ActiveTab == Tab then
-                return
+            After = function()
+                if Tabbox.ActiveTab then
+                    Tabbox.ActiveTab:Resize()
+                end
+                if ParentObj.Type == "Groupbox" then
+                    ParentObj:Resize()
+                end
+            end,
+        })
+
+        function Tabbox:Destroy()
+            if Tabbox.PoppedOut then
+                Tabbox:SetPoppedOut(false)
             end
 
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = Hovering and 0.25 or 0.5,
-            }):Play()
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = Hovering and 0.25 or 0.5,
-                }):Play()
-            end
-        end
+            Tabbox.Destroyed = true
 
-        function Tab:Show()
-            if Library.ActiveTab == Tab then
-                return
-            end
-
-            if Library.ActiveTab then
-                Library.ActiveTab:Hide()
-            end
-
-            TweenService:Create(TabButton, Library.TweenInfo, {
-                BackgroundTransparency = 0,
-            }):Play()
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0,
-            }):Play()
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = 0,
-                }):Play()
-            end
-
-            if Description then
-                Window:ShowTabInfo(Name, Description)
-            end
-
-            Library:PlayTabAnimation(Tab, true)
-            Tab:RefreshSides()
-
-            Library.ActiveTab = Tab
-
-            if Library.Searching then
-                Library:UpdateSearch(Library.SearchText)
-            end
-        end
-
-        function Tab:Hide()
-            TweenService:Create(TabButton, Library.TweenInfo, {
-                BackgroundTransparency = 1,
-            }):Play()
-
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0.5,
-            }):Play()
-
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = 0.5,
-                }):Play()
-            end
-
-            Library:PlayTabAnimation(Tab, false)
-            Window:HideTabInfo()
-
-            Library.PreviousTab = Tab
-            Library.ActiveTab = nil
-        end
-
-        function Tab:SetVisible(Visible: boolean)
-            TabButton.Visible = Visible
-
-            if not Visible and Library.ActiveTab == Tab then
-                Tab:Hide()
-            end
-        end
-
-        function Tab:SetOrder(NewOrder: number)
-            Order = NewOrder
-            TabButton.LayoutOrder = Order
-        end
-
-        function Tab:SetTooltip(Text: string?)
-            Tab.Tooltip = Text
-
-            if Tab.TooltipTable then
-                Tab.TooltipTable:Destroy()
-                Tab.TooltipTable = nil
-            end
-
-            if typeof(Text) == "string" then
-                Tab.TooltipTable = Library:AddTooltip(Text, nil, TabButton)
-            end
-        end
-
-        function Tab:Destroy()
-            Tab.Destroyed = true
-
-            if Tab.Connections then
-                for _, Connection in Tab.Connections do
+            if Tabbox.Connections then
+                for _, Connection in Tabbox.Connections do
                     Connection:Disconnect()
                 end
             end
 
-            if Tab.TooltipTable then
-                Tab.TooltipTable:Destroy()
-                Tab.TooltipTable = nil
-            end
-
-            for _, Groupbox in Tab.Groupboxes do
-                if Groupbox.Destroy then
-                    Groupbox:Destroy()
-                end
-            end
-            table.clear(Tab.Groupboxes)
-
-            for _, Tabbox in Tab.Tabboxes do
-                if Tabbox.Destroy then
-                    Tabbox:Destroy()
-                end
-            end
-            table.clear(Tab.Tabboxes)
-
-            for _, DepGroupbox in Tab.DependencyGroupboxes do
-                if DepGroupbox.Destroy then
-                    DepGroupbox:Destroy()
+            for _, Tab in Tabbox.Tabs do
+                if Tab.Destroy then
+                    Tab:Destroy()
                 end
             end
 
-            if TabContainer then
-                TabContainer:Destroy()
+            if TabboxHolder then
+                TabboxHolder:Destroy()
             end
 
-            if TabButton then
-                for Index, Entry in Library.TabButtons do
-                    if typeof(Entry) == "table" and Entry.Button == TabButton then
-                        table.remove(Library.TabButtons, Index)
-                        break
-                    end
-                end
-
-                TabButton:Destroy()
+            if BoxHolder then
+                BoxHolder:Destroy()
             end
-
-            Library.Tabs[Name] = nil
         end
 
-        --// Execution \\--
-        if typeof(Tooltip) == "string" then
-            Tab.TooltipTable = Library:AddTooltip(Tooltip, nil, TabButton)
+        if Info.Name then
+            Tab.Tabboxes[Info.Name] = Tabbox
+        else
+            table.insert(Tab.Tabboxes, Tabbox)
         end
 
-        if not Library.ActiveTab then
-            Tab:Show()
-        end
-
-        TabButton.MouseEnter:Connect(function()
-            Tab:Hover(true)
-        end)
-        TabButton.MouseLeave:Connect(function()
-            Tab:Hover(false)
-        end)
-        TabButton.MouseButton1Click:Connect(Tab.Show)
-
-        Library.Tabs[Name] = Tab
-
-        return Tab
+        return Tabbox
     end
 
-    function Window:AddKeyTab(...)
-        local Name = nil
-        local Icon = nil
-        local Description = nil
-        local Tooltip = nil
-        local Order = nil
+    Tab.AddTabbox = AddTabbox
 
-        if select("#", ...) == 1 and typeof(...) == "table" then
-            local Info = select(1, ...)
-            Name = Info.Name or "Tab"
-            Icon = Info.Icon
-            Description = Info.Description
-            Tooltip = Info.Tooltip
-            Order = Info.Order
-        else
-            Name = select(1, ...) or "Tab"
-            Icon = select(2, ...)
-            Description = select(3, ...)
-            Order = select(4, ...)
-        end
+    --// Deprecated - Use Tab:AddTabbox instead.
+    function Tab:AddLeftTabbox(Name)
+        return Tab:AddTabbox({ Side = 1, Name = Name })
+    end
 
-        if not tonumber(Order) then
-            Order = #Tabs:GetChildren()
-        end
+    --// Deprecated - Use Tab:AddTabbox instead.
+    function Tab:AddRightTabbox(Name)
+        return Tab:AddTabbox({ Side = 2, Name = Name })
+    end
 
-        Icon = Icon or "key"
+    function Tab:AddGroupbox(Info)
+        Info = Library:Validate(Info, Templates.Groupbox)
 
-        local TabButton: TextButton
-        local TabLabel
-        local TabIcon
-
-        local TabContainer
-
-        Icon = if Icon == "key" then KeyIcon else Library:GetCustomIcon(Icon)
-        do
-            TabButton = New("TextButton", {
-                BackgroundColor3 = "MainColor",
-                BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 40),
-                Text = "",
-                LayoutOrder = Order,
-                Parent = Tabs,
-            })
-            local ButtonPadding = New("UIPadding", {
-                PaddingBottom = UDim.new(0, IsCompact and 6 or 11),
-                PaddingLeft = UDim.new(0, IsCompact and 6 or 12),
-                PaddingRight = UDim.new(0, IsCompact and 6 or 12),
-                PaddingTop = UDim.new(0, IsCompact and 6 or 11),
-                Parent = TabButton,
-            })
-
-            TabLabel = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Position = UDim2.fromOffset(30, 0),
-                Size = UDim2.new(1, -30, 1, 0),
-                Text = Name,
-                TextSize = 16,
-                TextTransparency = 0.5,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Visible = not IsCompact,
-                Parent = TabButton,
-            })
-
-            if Icon then
-                TabIcon = New("ImageLabel", {
-                    ImageColor3 = Icon.Custom and "WhiteColor" or "AccentColor",
-                    ImageTransparency = 0.5,
-                    Size = UDim2.fromScale(1, 1),
-                    SizeConstraint = IsCompact and Enum.SizeConstraint.RelativeXY or Enum.SizeConstraint.RelativeYY,
-                    Parent = TabButton,
-                })
-                Library:ApplyLucideIcon(TabIcon, Icon)
+        if typeof(Info.Side) == "string" then
+            local lowerSide = string.lower(Info.Side)
+            if not SideIndex[lowerSide] then
+                error(string.format("Invalid side: %s", Info.Side))
             end
 
-            table.insert(Library.TabButtons, {
-                Label = TabLabel,
-                Padding = ButtonPadding,
-                Icon = TabIcon,
+            Info.Side = SideIndex[lowerSide]
+        end
+
+        local BoxHolder = New("Frame", {
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            Size = UDim2.fromScale(1, 0),
+            Parent = (Info.Side == 1) and TabLeft or TabRight,
+        })
+        New("UIListLayout", {
+            Padding = UDim.new(0, 6),
+            Parent = BoxHolder,
+        })
+        New("UIPadding", {
+            PaddingBottom = UDim.new(0, 4),
+            PaddingTop = UDim.new(0, 4),
+            Parent = BoxHolder,
+        })
+
+        local GroupboxHolder
+
+        local GroupboxTop
+        local GroupboxLabel
+        local GroupboxDescription
+
+        local GroupboxContainer
+        local GroupboxList
+
+        local GroupboxCollapseArrow
+        local GroupboxLine
+
+        do
+            GroupboxHolder = New("Frame", {
+                BackgroundColor3 = "BackgroundColor",
+                Size = UDim2.fromScale(1, 0),
+                Parent = BoxHolder,
+            })
+            table.insert(
+                Library.Corners,
+                New("UICorner", {
+                    CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                    Parent = GroupboxHolder,
+                })
+            )
+            New("UIListLayout", {
+                Parent = GroupboxHolder,
+            })
+            Library:AddOutline(GroupboxHolder)
+
+            GroupboxTop = New("Frame", {
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                Size = UDim2.fromScale(1, 0),
+                Parent = GroupboxHolder,
+            })
+            New("UIPadding", {
+                PaddingBottom = UDim.new(0, 6),
+                PaddingLeft = UDim.new(0, 6),
+                PaddingRight = UDim.new(0, 6),
+                PaddingTop = UDim.new(0, 6),
+                Parent = GroupboxTop,
             })
 
-            --// Tab Container \\--
-            TabContainer = New("ScrollingFrame", {
-                AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            local BoxIcon = Library:GetCustomIcon(Info.IconName)
+            if BoxIcon then
+                local GroupboxHeaderIcon = New("ImageLabel", {
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    ImageColor3 = BoxIcon.Custom and "WhiteColor" or "AccentColor",
+                    Position = UDim2.fromScale(0, 0.5),
+                    Size = UDim2.fromOffset(22, 22),
+                    Parent = GroupboxTop,
+                })
+                Library:ApplyLucideIcon(GroupboxHeaderIcon, BoxIcon)
+            end
+
+            local RightInset = if Info.DisableCollapsing ~= true then 22 else 0
+            local TextsFrame = New("Frame", {
+                AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
-                CanvasSize = UDim2.fromScale(0, 0),
-                ScrollBarThickness = 0,
-                Position = UDim2.fromScale(0, 0),
-                Size = UDim2.fromScale(1, 1),
-                Visible = false,
-                Parent = Container,
+                Position = UDim2.fromOffset(BoxIcon and 24 or 0, 0),
+                Size = UDim2.new(1, -RightInset - (BoxIcon and 24 or 0), 0, 0),
+                Parent = GroupboxTop,
             })
             New("UIListLayout", {
-                HorizontalAlignment = Enum.HorizontalAlignment.Center,
-                Padding = UDim.new(0, 8),
-                VerticalAlignment = Enum.VerticalAlignment.Center,
-                Parent = TabContainer,
+                Parent = TextsFrame,
             })
             New("UIPadding", {
-                PaddingLeft = UDim.new(0, 1),
-                PaddingRight = UDim.new(0, 1),
-                Parent = TabContainer,
+                PaddingBottom = UDim.new(0, 3),
+                PaddingLeft = UDim.new(0, 6),
+                PaddingRight = UDim.new(0, 6),
+                PaddingTop = UDim.new(0, 3),
+                Parent = TextsFrame,
+            })
+
+            GroupboxLabel = New("TextLabel", {
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                Size = UDim2.fromScale(1, 0),
+                Text = Info.Name,
+                TextSize = 15,
+                TextWrapped = true,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = TextsFrame,
+            })
+            New("UIPadding", {
+                PaddingBottom = UDim.new(0, 1),
+                Parent = GroupboxLabel,
+            })
+
+            GroupboxDescription = New("TextLabel", {
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                Size = UDim2.fromScale(1, 0),
+                Text = Info.Description or "",
+                TextSize = 14,
+                TextTransparency = 0.5,
+                TextWrapped = true,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Visible = (Info.Description ~= nil),
+                Parent = TextsFrame,
+            })
+
+            GroupboxCollapseArrow = New("ImageButton", {
+                Visible = Info.DisableCollapsing ~= true,
+                AnchorPoint = Vector2.new(1, 0.5),
+                BackgroundTransparency = 1,
+                ImageColor3 = "WhiteColor",
+                Position = UDim2.fromScale(1, 0.5),
+                Size = UDim2.fromOffset(22, 22),
+                Parent = GroupboxTop,
+            })
+            if ArrowIcon then
+                Library:ApplyLucideIcon(GroupboxCollapseArrow, ArrowIcon, 180)
+            end
+
+            GroupboxLine = Library:MakeLine(GroupboxHolder, {
+                LayoutOrder = 1,
+                Size = UDim2.new(1, 0, 0, 1),
+            })
+
+            GroupboxContainer = New("ScrollingFrame", {
+                AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                CanvasSize = UDim2.fromScale(0, 0),
+                LayoutOrder = 2,
+                ScrollBarThickness = 0,
+                Size = UDim2.fromScale(1, 0),
+                Parent = GroupboxHolder,
+            })
+
+            GroupboxList = New("UIListLayout", {
+                Padding = UDim.new(0, 8),
+                Parent = GroupboxContainer,
+            })
+            New("UIPadding", {
+                PaddingBottom = UDim.new(0, 7),
+                PaddingLeft = UDim.new(0, 7),
+                PaddingRight = UDim.new(0, 7),
+                PaddingTop = UDim.new(0, 7),
+                Parent = GroupboxContainer,
             })
         end
 
-        --// Tab Table \\--
-        local Tab = {
-            Description = Description,
-            IsKeyTab = true,
+        local Groupbox: any = {
+            Type = "Groupbox",
 
-            Tooltip = Tooltip,
-            TooltipTable = nil,
+            Name = Info.Name,
+            Description = Info.Description,
 
-            Elements = {},
+            Connections = {},
+            Destroyed = false,
 
-            Window = Window,
-            Button = TabButton,
-            Container = TabContainer
+            Visible = true,
+            Collapsed = false,
+
+            BoxHolder = BoxHolder,
+            Holder = GroupboxHolder,
+            Container = GroupboxContainer,
+
+            Tab = Tab,
+            DependencyBoxes = {},
+            Elements = {}
         }
 
-        function Tab:AddKeyBox(Callback)
-            assert(typeof(Callback) == "function", "Callback must be a function")
+        local ResizeTween
+        local CollapseArrowTween
 
-            local Holder = New("Frame", {
-                BackgroundTransparency = 1,
-                Size = UDim2.new(0.75, 0, 0, 21),
-                Parent = TabContainer,
-            })
-
-            local Box = New("TextBox", {
-                BackgroundColor3 = "MainColor",
-                PlaceholderText = "Key",
-                Size = UDim2.new(1, -71, 1, 0),
-                TextSize = 14,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = Holder,
-            })
-            New("UIPadding", {
-                PaddingLeft = UDim.new(0, 8),
-                PaddingRight = UDim.new(0, 8),
-                Parent = Box,
-            })
-            local BoxStroke = New("UIStroke", {
-                Color = "OutlineColor",
-                Parent = Box,
-            })
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                    Parent = Box,
-                })
-            )
-
-            Box.Focused:Connect(function()
-                Library.Registry[BoxStroke].Color = "AccentColor"
-                TweenService:Create(BoxStroke, Library.TweenInfo, {
-                    Color = Library.Scheme.AccentColor,
-                }):Play()
-            end)
-
-            Box.FocusLost:Connect(function()
-                Library.Registry[BoxStroke].Color = "OutlineColor"
-                TweenService:Create(BoxStroke, Library.TweenInfo, {
-                    Color = Library.Scheme.OutlineColor,
-                }):Play()
-            end)
-
-            local Button = New("TextButton", {
-                AnchorPoint = Vector2.new(1, 0),
-                BackgroundColor3 = "MainColor",
-                Position = UDim2.fromScale(1, 0),
-                Size = UDim2.new(0, 63, 1, 0),
-                Text = "Execute",
-                TextSize = 14,
-                TextTransparency = 0.4,
-                Parent = Holder,
-            })
-            New("UIStroke", {
-                Color = "OutlineColor",
-                Parent = Button,
-            })
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                    Parent = Button,
-                })
-            )
-
-            Button.MouseEnter:Connect(function()
-                TweenService:Create(Button, Library.TweenInfo, {
-                    TextTransparency = 0,
-                }):Play()
-            end)
-
-            Button.MouseLeave:Connect(function()
-                TweenService:Create(Button, Library.TweenInfo, {
-                    TextTransparency = 0.4,
-                }):Play()
-            end)
-
-            Button.InputBegan:Connect(function(Input)
-                if not IsClickInput(Input) then
-                    return
-                end
-
-                if not Library:MouseIsOverFrame(Button, Input.Position) then
-                    return
-                end
-
-                Callback(Box.Text)
-            end)
-        end
-
-        function Tab:Destroy()
-            if TabContainer then
-                TabContainer:Destroy()
+        function Groupbox:Resize()
+            if ResizeTween then
+                StopTween(ResizeTween, true)
+                ResizeTween = nil
             end
 
-            if TabButton then
-                for Index, Entry in Library.TabButtons do
-                    if typeof(Entry) == "table" and Entry.Button == TabButton then
-                        table.remove(Library.TabButtons, Index)
-                        break
+            local TopSize = (GroupboxTop.AbsoluteSize.Y / Library.DPIScale)
+            local ContainerSize = (GroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 14
+            if Groupbox.PoppedOut then
+                ContainerSize = math.min(ContainerSize, GetPopOutBodyMaxHeight(Groupbox, TopSize + 1))
+            end
+
+            local TargetSize = UDim2.new(1, 0, 0, if Groupbox.Collapsed then TopSize else (TopSize + 1 + ContainerSize))
+            GroupboxContainer.Size = UDim2.new(1, 0, 0, ContainerSize)
+            GroupboxLine.Visible = not Groupbox.Collapsed
+
+            if Library.Animations and Library.Animations.Groupbox then
+                local TweenInfo = Library.GroupboxTweenInfo or TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                local Tween = TweenService:Create(GroupboxHolder, TweenInfo, { Size = TargetSize })
+                ResizeTween = Tween
+
+                local Connection; Connection = Library:GiveSignal(Tween.Completed:Once(function()
+                    if Connection then
+                        Connection:Disconnect()
+                    end
+
+                    if ResizeTween == Tween then
+                        StopTween(ResizeTween, true)
+                        ResizeTween = nil
+                    end
+                end))
+
+                Tween:Play()
+            else
+                GroupboxHolder.Size = TargetSize
+            end
+        end
+
+        function Groupbox:SetDescription(Description: string | nil)
+            GroupboxDescription.Text = Description or ""
+            GroupboxDescription.Visible = (Description ~= nil)
+
+            Groupbox:Resize()
+        end
+
+        function Groupbox:SetCollapsed(Collapsed: boolean)
+            if Info.DisableCollapsing == true then return end
+            Groupbox.Collapsed = Collapsed
+
+            if CollapseArrowTween then
+                StopTween(CollapseArrowTween, true)
+                CollapseArrowTween = nil
+            end
+
+            local TargetRotation = if Collapsed then 0 else 180
+
+            GroupboxContainer.Visible = not Collapsed
+            if Library.Animations and Library.Animations.Groupbox then
+                local TweenInfo = Library.GroupboxTweenInfo or TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+                local Tween = TweenService:Create(GroupboxCollapseArrow, TweenInfo, { Rotation = TargetRotation })
+                CollapseArrowTween = Tween
+
+                local Connection; Connection = Library:GiveSignal(Tween.Completed:Connect(function()
+                    if Connection then
+                        Connection:Disconnect()
+                    end
+
+                    if CollapseArrowTween == Tween then
+                        StopTween(CollapseArrowTween, true)
+                        CollapseArrowTween = nil
+                    end
+                end))
+
+                Tween:Play()
+            else
+                GroupboxCollapseArrow.Rotation = TargetRotation
+            end
+
+            Groupbox:Resize()
+        end
+
+        function Groupbox:ToggleCollapsed()
+            if Info.DisableCollapsing == true then return end
+            Groupbox:SetCollapsed(not Groupbox.Collapsed)
+        end
+
+        Library:MakeBoxPopOut(Groupbox, {
+            Enabled = Info.PopOut ~= false,
+
+            Header = GroupboxTop,
+            Children = function()
+                local Children = {}
+                for _, Child in BoxHolder:GetChildren() do
+                    if Child:IsA("GuiObject") and Child ~= Groupbox.PopOutPlaceholder then
+                        table.insert(Children, Child)
                     end
                 end
+                return Children
+            end,
 
-                TabButton:Destroy()
+            Before = function()
+                GroupboxCollapseArrow.Visible = false
+            end,
+            After = function()
+                GroupboxCollapseArrow.Visible = Info.DisableCollapsing ~= true
+                Groupbox:Resize()
+            end
+        })
+
+        function Groupbox:Destroy()
+            if Groupbox.PoppedOut then
+                Groupbox:SetPoppedOut(false)
             end
 
-            Library.Tabs[Name] = nil
+            Groupbox.Destroyed = true
+
+            if ResizeTween then
+                StopTween(ResizeTween, true)
+                ResizeTween = nil
+            end
+
+            if CollapseArrowTween then
+                StopTween(CollapseArrowTween, true)
+                CollapseArrowTween = nil
+            end
+
+            if Groupbox.Connections then
+                for _, Connection in Groupbox.Connections do
+                    Connection:Disconnect()
+                end
+            end
+
+            for _, Element in Groupbox.Elements do
+                if Element.Destroy then
+                    Element:Destroy()
+                end
+            end
+            table.clear(Groupbox.Elements)
+
+            for _, SubDepbox in Groupbox.DependencyBoxes do
+                if SubDepbox.Destroy then
+                    SubDepbox:Destroy()
+                end
+            end
+            table.clear(Groupbox.DependencyBoxes)
+
+            if GroupboxHolder then
+                GroupboxHolder:Destroy()
+            end
+
+            if BoxHolder then
+                BoxHolder:Destroy()
+            end
         end
 
-        function Tab:SetOrder(NewOrder: number)
-            Order = NewOrder
-            TabButton.LayoutOrder = Order
-        end
+        function Groupbox:SetVisible(Visible: boolean)
+            Groupbox.Visible = Visible
+            BoxHolder.Visible = Visible
+            SyncPopOutVisibility(Groupbox)
 
-        function Tab:RefreshSides() end
-        function Tab:Resize() end
-        function Tab:UpdateCorners() end
-
-        function Tab:Hover(Hovering)
-            if Library.ActiveTab == Tab then
-                return
-            end
-
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = Hovering and 0.25 or 0.5,
-            }):Play()
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = Hovering and 0.25 or 0.5,
-                }):Play()
-            end
-        end
-
-        function Tab:Show()
-            if Library.ActiveTab == Tab then
-                return
-            end
-
-            if Library.ActiveTab then
-                Library.ActiveTab:Hide()
-            end
-
-            TweenService:Create(TabButton, Library.TweenInfo, {
-                BackgroundTransparency = 0,
-            }):Play()
-
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0,
-            }):Play()
-
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = 0,
-                }):Play()
-            end
-
-            Library:PlayTabAnimation(Tab, true)
-
-            if Description then
-                Window:ShowTabInfo(Name, Description)
-            end
-
-            Tab:RefreshSides()
-
-            Library.ActiveTab = Tab
-
-            if Library.Searching then
+            if Visible == true and Library.Searching then
                 Library:UpdateSearch(Library.SearchText)
             end
         end
 
-        function Tab:Hide()
-            TweenService:Create(TabButton, Library.TweenInfo, {
-                BackgroundTransparency = 1,
-            }):Play()
+        function Groupbox:Show()
+            Groupbox:SetVisible(true)
+        end
 
+        function Groupbox:Hide()
+            Groupbox:SetVisible(false)
+        end
+
+        if Info.DisableCollapsing ~= true then
+            GroupboxCollapseArrow.MouseButton1Click:Connect(function()
+                Groupbox:ToggleCollapsed()
+            end)
+        end
+
+        Groupbox.AddTabbox = AddTabbox
+        setmetatable(Groupbox, BaseGroupbox)
+
+        Groupbox:Resize()
+        Tab.Groupboxes[Info.Name] = Groupbox
+
+        if Info.Visible == false then
+            Groupbox:Hide()
+        end
+
+        if Info.DisableCollapsing ~= true and Info.Collapsed == true then
+            Groupbox:SetCollapsed(true)
+        end
+
+        return Groupbox
+    end
+
+    --// Deprecated - Use Tab:AddGroupbox instead.
+    function Tab:AddLeftGroupbox(Name, IconName, Visible, Collapsed, DisableCollapsing)
+        return Tab:AddGroupbox({ Side = 1, Name = Name, IconName = IconName, Visible = Visible, Collapsed = Collapsed, DisableCollapsing = DisableCollapsing })
+    end
+
+    --// Deprecated - Use Tab:AddGroupbox instead.
+    function Tab:AddRightGroupbox(Name, IconName, Visible, Collapsed, DisableCollapsing)
+        return Tab:AddGroupbox({ Side = 2, Name = Name, IconName = IconName, Visible = Visible, Collapsed = Collapsed, DisableCollapsing = DisableCollapsing })
+    end
+
+    function Tab:Hover(Hovering)
+        if Library.ActiveTab == Tab then
+            return
+        end
+
+        if Hovering then
+            TabLabel.Visible = true
             TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0.5,
+                TextTransparency = 0.25,
             }):Play()
-
+            if TabIcon then
+                TweenService:Create(TabIcon, Library.TweenInfo, {
+                    ImageTransparency = 0.25,
+                }):Play()
+            end
+        else
+            TabLabel.Visible = false
+            TabLabel.TextTransparency = 0.5
             if TabIcon then
                 TweenService:Create(TabIcon, Library.TweenInfo, {
                     ImageTransparency = 0.5,
                 }):Play()
             end
-
-            Library:PlayTabAnimation(Tab, false)
-            Window:HideTabInfo()
-
-            Library.PreviousTab = Tab
-            Library.ActiveTab = nil
         end
-
-        function Tab:SetVisible(Visible: boolean)
-            TabButton.Visible = Visible
-
-            if not Visible and Library.ActiveTab == Tab then
-                Tab:Hide()
-            end
-        end
-
-        function Tab:SetTooltip(Text: string?)
-            Tab.Tooltip = Text
-
-            if Tab.TooltipTable then
-                Tab.TooltipTable:Destroy()
-                Tab.TooltipTable = nil
-            end
-
-            if typeof(Text) == "string" then
-                Tab.TooltipTable = Library:AddTooltip(Text, nil, TabButton)
-            end
-        end
-
-        --// Execution \\--
-        if typeof(Tooltip) == "string" then
-            Tab.TooltipTable = Library:AddTooltip(Tooltip, nil, TabButton)
-        end
-
-        if not Library.ActiveTab then
-            Tab:Show()
-        end
-
-        TabButton.MouseEnter:Connect(function()
-            Tab:Hover(true)
-        end)
-        TabButton.MouseLeave:Connect(function()
-            Tab:Hover(false)
-        end)
-        TabButton.MouseButton1Click:Connect(Tab.Show)
-
-        Tab.Container = TabContainer
-        setmetatable(Tab, BaseGroupbox)
-
-        Library.Tabs[Name] = Tab
-
-        return Tab
     end
+
+    function Tab:Show()
+        if Library.ActiveTab == Tab then
+            return
+        end
+
+        if Library.ActiveTab then
+            Library.ActiveTab:Hide()
+        end
+
+        TweenService:Create(TabButton, Library.TweenInfo, {
+            BackgroundTransparency = 0,
+        }):Play()
+        TweenService:Create(TabLabel, Library.TweenInfo, {
+            TextTransparency = 0,
+        }):Play()
+        if TabIcon then
+            TweenService:Create(TabIcon, Library.TweenInfo, {
+                ImageTransparency = 0,
+            }):Play()
+        end
+
+        -- Sekme aktif olduğunda etiketi gizle (üstte zaten gösteriliyor)
+        TabLabel.Visible = false
+
+        if Description then
+            Window:ShowTabInfo(Name, Description)
+        end
+
+        Library:PlayTabAnimation(Tab, true)
+        Tab:RefreshSides()
+
+        Library.ActiveTab = Tab
+
+        if Library.Searching then
+            Library:UpdateSearch(Library.SearchText)
+        end
+    end
+
+    function Tab:Hide()
+        TweenService:Create(TabButton, Library.TweenInfo, {
+            BackgroundTransparency = 1,
+        }):Play()
+
+        TweenService:Create(TabLabel, Library.TweenInfo, {
+            TextTransparency = 0.5,
+        }):Play()
+
+        if TabIcon then
+            TweenService:Create(TabIcon, Library.TweenInfo, {
+                ImageTransparency = 0.5,
+            }):Play()
+        end
+
+        -- Sekme gizlendiğinde etiketi gizle
+        TabLabel.Visible = false
+
+        Library:PlayTabAnimation(Tab, false)
+        Window:HideTabInfo()
+
+        Library.PreviousTab = Tab
+        Library.ActiveTab = nil
+    end
+
+    function Tab:SetVisible(Visible: boolean)
+        TabButton.Visible = Visible
+
+        if not Visible and Library.ActiveTab == Tab then
+            Tab:Hide()
+        end
+    end
+
+    function Tab:SetOrder(NewOrder: number)
+        Order = NewOrder
+        TabButton.LayoutOrder = Order
+    end
+
+    function Tab:SetTooltip(Text: string?)
+        Tab.Tooltip = Text
+
+        if Tab.TooltipTable then
+            Tab.TooltipTable:Destroy()
+            Tab.TooltipTable = nil
+        end
+
+        if typeof(Text) == "string" then
+            Tab.TooltipTable = Library:AddTooltip(Text, nil, TabButton)
+        end
+    end
+
+    function Tab:Destroy()
+        Tab.Destroyed = true
+
+        if Tab.Connections then
+            for _, Connection in Tab.Connections do
+                Connection:Disconnect()
+            end
+        end
+
+        if Tab.TooltipTable then
+            Tab.TooltipTable:Destroy()
+            Tab.TooltipTable = nil
+        end
+
+        for _, Groupbox in Tab.Groupboxes do
+            if Groupbox.Destroy then
+                Groupbox:Destroy()
+            end
+        end
+        table.clear(Tab.Groupboxes)
+
+        for _, Tabbox in Tab.Tabboxes do
+            if Tabbox.Destroy then
+                Tabbox:Destroy()
+            end
+        end
+        table.clear(Tab.Tabboxes)
+
+        for _, DepGroupbox in Tab.DependencyGroupboxes do
+            if DepGroupbox.Destroy then
+                DepGroupbox:Destroy()
+            end
+        end
+
+        if TabContainer then
+            TabContainer:Destroy()
+        end
+
+        if TabButton then
+            for Index, Entry in Library.TabButtons do
+                if typeof(Entry) == "table" and Entry.Button == TabButton then
+                    table.remove(Library.TabButtons, Index)
+                    break
+                end
+            end
+
+            TabButton:Destroy()
+        end
+
+        Library.Tabs[Name] = nil
+    end
+
+    --// Execution \\--
+    if typeof(Tooltip) == "string" then
+        Tab.TooltipTable = Library:AddTooltip(Tooltip, nil, TabButton)
+    end
+
+    if not Library.ActiveTab then
+        Tab:Show()
+    end
+
+    -- TabButton'un kendi MouseEnter/MouseLeave olaylarını da güncelle
+    TabButton.MouseEnter:Connect(function()
+        Tab:Hover(true)
+    end)
+    TabButton.MouseLeave:Connect(function()
+        Tab:Hover(false)
+    end)
+    TabButton.MouseButton1Click:Connect(Tab.Show)
+
+    Library.Tabs[Name] = Tab
+
+    return Tab
+end
 
     function Window:AddDialog(Idx, Info)
         Info = Library:Validate(Info, Templates.Dialog)
