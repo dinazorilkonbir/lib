@@ -528,20 +528,17 @@ local function GetSchemeValue(Index)
     if not Index then
         return nil
     end
-
     local ReplaceAliasIndex = SchemeReplaceAlias[Index]
     if ReplaceAliasIndex and Library.Scheme[ReplaceAliasIndex] ~= nil then
         Library.Scheme[Index] = Library.Scheme[ReplaceAliasIndex]
         Library.Scheme[ReplaceAliasIndex] = nil
         return Library.Scheme[Index]
     end
-
     local AliasIndex = SchemeAlias[Index]
     if AliasIndex and Library.Scheme[AliasIndex] ~= nil then
         warn(string.format("Scheme Value %q is deprecated, please use %q instead.", Index, AliasIndex))
         return Library.Scheme[AliasIndex]
     end
-
     return Library.Scheme[Index]
 end
 
@@ -3468,7 +3465,7 @@ function Library:OnUnload(Callback)
     table.insert(Library.UnloadSignals, Callback)
 end
 
--- [[ BaseAddons: AddKeyPicker, AddColorPicker — aynen kalıyor ]]
+-- [[ BaseAddons ]]
 local BaseAddons = {}
 do
     local Funcs = {}
@@ -7095,7 +7092,6 @@ do
         )
         Dropdown.Menu = MenuTable
 
-        --// Multi dropdownlar için Select All / Deselect All
         local ItemHeight = 21
         local PoolSize = math.max(1, Info.MaxVisibleDropdownItems + 2)
         local Pool = {}
@@ -7904,7 +7900,6 @@ do
         end
         return Dropdown
     end
-
     function Funcs:AddViewport(Idx, Info)
         if self.Destroyed then return nil end
         Info = Library:Validate(Info, Templates.Viewport)
@@ -9659,7 +9654,7 @@ function Library:ToggleNotificationHistory()
 end
 
 --// ==============================================================
---// CreateWindow — Minimize/Restore + Bildirim Çanı (sola kaydırılmış)
+--// CreateWindow — Minimize/Restore + Bildirim Çanı (RightBarInset = 70)
 --// ==============================================================
 function Library:CreateWindow(WindowInfo)
     WindowInfo = Library:Validate(WindowInfo, Templates.Window)
@@ -9749,7 +9744,8 @@ function Library:CreateWindow(WindowInfo)
     local MiniFooter
     local MiniLabels = {}
     local MiniSubtitleExplicit = (WindowInfo.MinimizedSubtitle or "") ~= ""
-    local RightBarInset = 50
+    --// Search kutusunun sağ kenarını ve top-right araç grubunu ayarlar (BÜYÜK = search daha dar)
+    local RightBarInset = 70
     local ApplyWindowVisibility
 
     do
@@ -10009,9 +10005,7 @@ function Library:CreateWindow(WindowInfo)
             Library:ApplyLucideIcon(MoveIconImage, MoveIcon)
         end
 
-        --// ============================================================
         --// MINIMIZE BUTONU + MINIMIZED KART
-        --// ============================================================
         if WindowInfo.Minimizable then
             local MinimizeIcon = Library:GetIcon("minus")
 
@@ -10031,7 +10025,6 @@ function Library:CreateWindow(WindowInfo)
                 CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
                 Parent = MinimizeButton,
             }))
-
             local MinimizeImage
             if MinimizeIcon then
                 MinimizeImage = New("ImageLabel", {
@@ -10047,7 +10040,6 @@ function Library:CreateWindow(WindowInfo)
                     Parent = MinimizeButton,
                 })
             end
-
             Library:AddTooltip("Minimize", nil, MinimizeButton)
             MinimizeButton.MouseEnter:Connect(function()
                 TweenService:Create(MinimizeButton, Library.TweenInfo, { BackgroundTransparency = 0 }):Play()
@@ -10065,7 +10057,6 @@ function Library:CreateWindow(WindowInfo)
                 Library.Window:SetMinimized(true)
             end)
 
-            --// Minimized Kart
             MiniFrame = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundColor3 = function()
@@ -10088,7 +10079,6 @@ function Library:CreateWindow(WindowInfo)
                 SortOrder = Enum.SortOrder.LayoutOrder,
                 Parent = MiniFrame,
             })
-
             local MiniHeader = New("Frame", {
                 BackgroundTransparency = 1,
                 LayoutOrder = 0,
@@ -10107,7 +10097,6 @@ function Library:CreateWindow(WindowInfo)
                 VerticalAlignment = Enum.VerticalAlignment.Center,
                 Parent = MiniHeader,
             })
-
             local MiniIconData = WindowInfo.Icon and Library:GetCustomIcon(WindowInfo.Icon) or nil
             if MiniIconData then
                 local IconHolder = New("Frame", {
@@ -10131,7 +10120,6 @@ function Library:CreateWindow(WindowInfo)
                     Parent = IconHolder,
                 })
             end
-
             local MiniTitleHolder = New("Frame", {
                 BackgroundTransparency = 1,
                 LayoutOrder = 1,
@@ -10167,8 +10155,6 @@ function Library:CreateWindow(WindowInfo)
                 Visible = (WindowInfo.MinimizedSubtitle or "") ~= "",
                 Parent = MiniTitleHolder,
             })
-
-            --// Restore butonu
             local RestoreIcon = Library:GetIcon("chevron-up")
             local RestoreButton = New("TextButton", {
                 BackgroundTransparency = 1,
@@ -10197,8 +10183,6 @@ function Library:CreateWindow(WindowInfo)
             RestoreButton.MouseButton1Click:Connect(function()
                 Library.Window:SetMinimized(false)
             end)
-
-            --// MiniBody
             MiniBody = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
@@ -10219,8 +10203,6 @@ function Library:CreateWindow(WindowInfo)
                 SortOrder = Enum.SortOrder.LayoutOrder,
                 Parent = MiniBody,
             })
-
-            --// MiniFooter
             MiniFooterHolder = New("Frame", {
                 BackgroundTransparency = 1,
                 LayoutOrder = 2,
@@ -10250,20 +10232,17 @@ function Library:CreateWindow(WindowInfo)
                 MiniFooter.Text = WindowInfo.Footer
             end
             MiniFooterHolder.Visible = MiniFooter.Text ~= ""
-
             Library:MakeDraggable(MiniFrame, MiniHeader, true)
         end
 
-        --// ============================================================
-        --// BİLDİRİM ÇANI — sola kaydırıldı (-82)
-        --// ============================================================
+        --// BİLDİRİM ÇANI (sola kaydırıldı: -82)
         if not WindowInfo.DisableNotificationBell then
             local BellIcon = Library:GetIcon("bell")
             local BellButton = New("TextButton", {
                 AnchorPoint = Vector2.new(1, 0.5),
                 BackgroundColor3 = "MainColor",
                 BackgroundTransparency = 1,
-                Position = UDim2.new(1, -82, 0.5, 0), -- // Sola kaydırıldı: -52 → -82
+                Position = UDim2.new(1, -82, 0.5, 0),
                 Size = UDim2.fromOffset(30, 30),
                 Text = BellIcon and "" or "!",
                 TextSize = 14,
@@ -10791,6 +10770,7 @@ function Library:CreateWindow(WindowInfo)
             SearchBox.Size = UDim2.fromScale(1, 1)
         end
     end
+
     function Window:AddTab(...)
         local Name = nil
         local Icon = nil
@@ -12724,7 +12704,6 @@ function Library:CreateWindow(WindowInfo)
         end
     end
 
-    --// Window görünürlüğü: hangi kabuk (Main / Mini) ekranda olacak
     ApplyWindowVisibility = function()
         MainFrame.Visible = Library.Toggled and not Minimized
         if MiniFrame then
@@ -12817,7 +12796,6 @@ function Library:CreateWindow(WindowInfo)
         return Window:Toggle(Value)
     end
 
-    --// MinimizeKeybind
     if WindowInfo.Minimizable and WindowInfo.MinimizeKeybind then
         Library:GiveSignal(UserInputService.InputBegan:Connect(function(Input: InputObject, Processed: boolean)
             if Processed or Library.Unloaded or not Library.Toggled then return end
@@ -12974,7 +12952,6 @@ function Library:CreateWindow(WindowInfo)
     Window.MainFrame = MainFrame
     Library.Window = Window
 
-    --// AutoMinimize
     if WindowInfo.AutoMinimize and WindowInfo.Minimizable then
         Window:SetMinimized(true)
     end
