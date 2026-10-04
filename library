@@ -3468,6 +3468,7 @@ function Library:OnUnload(Callback)
     table.insert(Library.UnloadSignals, Callback)
 end
 
+-- [[ BaseAddons: AddKeyPicker, AddColorPicker — aynen kalıyor ]]
 local BaseAddons = {}
 do
     local Funcs = {}
@@ -5198,9 +5199,11 @@ do
     end
 end
 
+-- [[ BaseGroupbox ]]
 local BaseGroupbox = {}
 do
     local Funcs = {}
+
     function Funcs:AddDivider(...)
         if self.Destroyed then return nil end
         local Params = select(1, ...)
@@ -7092,9 +7095,7 @@ do
         )
         Dropdown.Menu = MenuTable
 
-        --// ============================================================
         --// Multi dropdownlar için Select All / Deselect All
-        --// ============================================================
         local ItemHeight = 21
         local PoolSize = math.max(1, Info.MaxVisibleDropdownItems + 2)
         local Pool = {}
@@ -7618,7 +7619,6 @@ do
             table.insert(Pool, CreatePoolRow())
         end
 
-        --// Select All / Deselect All satırı
         if UseSelectAll then
             local SelectAllRow = New("Frame", {
                 BackgroundTransparency = 1,
@@ -7904,6 +7904,7 @@ do
         end
         return Dropdown
     end
+
     function Funcs:AddViewport(Idx, Info)
         if self.Destroyed then return nil end
         Info = Library:Validate(Info, Templates.Viewport)
@@ -9658,7 +9659,7 @@ function Library:ToggleNotificationHistory()
 end
 
 --// ==============================================================
---// CreateWindow - Minimize/Restore desteğiyle
+--// CreateWindow — Minimize/Restore + Bildirim Çanı (sola kaydırılmış)
 --// ==============================================================
 function Library:CreateWindow(WindowInfo)
     WindowInfo = Library:Validate(WindowInfo, Templates.Window)
@@ -10253,14 +10254,16 @@ function Library:CreateWindow(WindowInfo)
             Library:MakeDraggable(MiniFrame, MiniHeader, true)
         end
 
-        --// Notification Bell
+        --// ============================================================
+        --// BİLDİRİM ÇANI — sola kaydırıldı (-82)
+        --// ============================================================
         if not WindowInfo.DisableNotificationBell then
             local BellIcon = Library:GetIcon("bell")
             local BellButton = New("TextButton", {
                 AnchorPoint = Vector2.new(1, 0.5),
                 BackgroundColor3 = "MainColor",
                 BackgroundTransparency = 1,
-                Position = UDim2.new(1, -52, 0.5, 0),
+                Position = UDim2.new(1, -82, 0.5, 0), -- // Sola kaydırıldı: -52 → -82
                 Size = UDim2.fromOffset(30, 30),
                 Text = BellIcon and "" or "!",
                 TextSize = 14,
@@ -10645,9 +10648,7 @@ function Library:CreateWindow(WindowInfo)
         end
     end
 
-    --// ============================================================
     --// Minimize/Restore API
-    --// ============================================================
     function Window:IsMinimized()
         return Minimized
     end
@@ -12980,7 +12981,6 @@ function Library:CreateWindow(WindowInfo)
 
     return Window
 end
-
 --// ============ CreateLoading ============
 function Library:CreateLoading(LoadingInfo)
     if Library.ActiveLoading then
