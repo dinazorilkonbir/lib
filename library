@@ -170,6 +170,7 @@ local Library = {
     NotificationBadge = nil,
     NotificationBadges = {},
     NotificationBell = nil,
+    NotificationBellMini = nil,
     NotificationTypeColors = {
         Error = Color3.fromRGB(255, 76, 76),
         Warning = Color3.fromRGB(255, 176, 32),
@@ -292,6 +293,7 @@ local Templates = {
     Window = {
         Title = "No Title",
         Footer = "No Footer",
+        CopyableFooter = true,
         Position = UDim2.fromOffset(6, 6),
         Size = UDim2.fromOffset(720, 600),
         IconSize = UDim2.fromOffset(30, 30),
@@ -305,6 +307,14 @@ local Templates = {
         SnapAvoidCoreGui = true,
         SearchbarSize = UDim2.fromScale(1, 1),
         GlobalSearch = false,
+        SearchKeybind = Enum.KeyCode.F,
+        DisableSearch = false,
+        DisableSearchKeybind = false,
+        Minimizable = true,
+        MinimizeKeybind = nil,
+        MinimizedWidth = 300,
+        MinimizedSubtitle = "",
+        AutoMinimize = false,
         CornerRadius = 4,
         NotifySide = "Right",
         DisableNotificationBell = false,
@@ -435,6 +445,7 @@ local Templates = {
         DragSelect = false,
         MaxVisibleDropdownItems = 8,
         KeepDisabledValuePosition = false,
+        SelectAllButtons = true,
         Callback = function() end,
         Changed = function() end,
         Disabled = false,
@@ -7080,14 +7091,76 @@ do
             "Dropdown"
         )
         Dropdown.Menu = MenuTable
+
+        --// ============================================================
+        --// Multi dropdownlar için Select All / Deselect All
+        --// ============================================================
         local ItemHeight = 21
         local PoolSize = math.max(1, Info.MaxVisibleDropdownItems + 2)
         local Pool = {}
         local FilteredEntries = {}
+
+        local UseSelectAll = Info.Multi and Info.SelectAllButtons ~= false
+        local HeaderOffset = UseSelectAll and ItemHeight or 0
+
+        local function IsValueSelected(Value)
+            if Info.Multi then
+                return Dropdown.Value[Value] == true
+            end
+            return Dropdown.Value == Value
+        end
+
+        local function RefreshButtons()
+            for _, Row in Pool do
+                Row:UpdateButton()
+            end
+        end
+
+        local function GetSelectableValues(Search)
+            local Table = {}
+            for _, Value in Dropdown.Values do
+                if table.find(Dropdown.DisabledValues, Value) then
+                    continue
+                end
+                if Search and Search ~= "" then
+                    local FormattedValue = tostring(Info.FormatListValue and Info.FormatListValue(Value) or Value)
+                    if not TryFuzzyMatch(FormattedValue, Search:lower()) then
+                        continue
+                    end
+                end
+                table.insert(Table, Value)
+            end
+            return Table
+        end
+
+        local function ApplyBulkSelection(State, Search)
+            if not Info.Multi then return end
+            local Values = GetSelectableValues(Search)
+            if #Values == 0 then return end
+            for _, Value in Values do
+                Dropdown.Value[Value] = State or nil
+            end
+            if not State and not Info.AllowNull and Dropdown:GetActiveValues(true) == 0 then
+                Dropdown.Value[Values[1]] = true
+            end
+            RefreshButtons()
+            Dropdown:Display()
+            Library:UpdateDependencyBoxes()
+            Dropdown:RunChanged()
+        end
+
+        function Dropdown:SelectAll(Search)
+            ApplyBulkSelection(true, Search)
+        end
+
+        function Dropdown:DeselectAll(Search)
+            ApplyBulkSelection(false, Search)
+        end
+
         function Dropdown:RecalculateListSize(Count)
             local ItemCount = Count or #FilteredEntries
-            local Y = math.clamp(ItemCount * ItemHeight, 0, Info.MaxVisibleDropdownItems * ItemHeight)
-            MenuTable.Menu.CanvasSize = UDim2.fromOffset(0, ItemCount * ItemHeight)
+            local Y = math.clamp(ItemCount * ItemHeight + HeaderOffset, 0, Info.MaxVisibleDropdownItems * ItemHeight + HeaderOffset)
+            MenuTable.Menu.CanvasSize = UDim2.fromOffset(0, ItemCount * ItemHeight + HeaderOffset)
             MenuTable:SetSize(function()
                 return UDim2.fromOffset((DisplayContainer.AbsoluteSize.X / Library.DPIScale), Y)
             end)
@@ -7243,7 +7316,7 @@ do
             end
             local MaxFirst = Total - PoolSize + 1
             local ScrollY = MenuTable.Menu.CanvasPosition.Y / Library.DPIScale
-            local Index = math.floor(ScrollY / ItemHeight) + 1
+            local Index = math.floor(math.max(0, ScrollY - HeaderOffset) / ItemHeight) + 1
             return math.clamp(Index, 1, MaxFirst)
         end
         function Dropdown:RefreshPool()
@@ -7259,7 +7332,7 @@ do
                     continue
                 end
                 Row.Container.Visible = true
-                Row.Container.Position = UDim2.fromOffset(0, (DataIndex - 1) * ItemHeight)
+                Row.Container.Position = UDim2.fromOffset(0, (DataIndex - 1) * ItemHeight + HeaderOffset)
                 local IsLast = DataIndex == Total
                 Row.Corner.BottomRightRadius = IsLast and UDim.new(0, Library.CornerRadius / 2) or UDim.new(0, 0)
                 Row.Corner.BottomLeftRadius = IsLast and UDim.new(0, Library.CornerRadius / 2) or UDim.new(0, 0)
@@ -7544,6 +7617,46 @@ do
         for _ = 1, PoolSize do
             table.insert(Pool, CreatePoolRow())
         end
+
+        --// Select All / Deselect All satırı
+        if UseSelectAll then
+            local SelectAllRow = New("Frame", {
+                BackgroundTransparency = 1,
+                Position = UDim2.fromOffset(0, 0),
+                Size = UDim2.new(1, 0, 0, ItemHeight),
+                Parent = MenuTable.Menu,
+            })
+            Library:MakeLine(SelectAllRow, {
+                AnchorPoint = Vector2.new(0, 1),
+                Position = UDim2.fromScale(0, 1),
+                Size = UDim2.new(1, 0, 0, 1),
+            })
+
+            local function MakeBulkButton(Text, Offset, State)
+                local Button = New("TextButton", {
+                    BackgroundTransparency = 1,
+                    Position = UDim2.fromScale(Offset, 0),
+                    Size = UDim2.new(0.5, 0, 1, 0),
+                    Text = Text,
+                    TextSize = 14,
+                    TextTransparency = 0.5,
+                    Parent = SelectAllRow,
+                })
+                Button.MouseEnter:Connect(function()
+                    TweenService:Create(Button, Library.TweenInfo, { TextTransparency = 0 }):Play()
+                end)
+                Button.MouseLeave:Connect(function()
+                    TweenService:Create(Button, Library.TweenInfo, { TextTransparency = 0.5 }):Play()
+                end)
+                Button.MouseButton1Click:Connect(function()
+                    ApplyBulkSelection(State, SearchBox and SearchBox.Text:lower() or nil)
+                end)
+            end
+
+            MakeBulkButton("Select All", 0, true)
+            MakeBulkButton("Deselect All", 0.5, false)
+        end
+
         table.insert(Dropdown.Connections, MenuTable.Menu:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
             Dropdown:RefreshPool()
         end))
@@ -7580,9 +7693,7 @@ do
                 end
             end
             Dropdown:Display()
-            for _, Row in Pool do
-                Row:UpdateButton()
-            end
+            RefreshButtons()
             if not Dropdown.Disabled then
                 Library:UpdateDependencyBoxes()
             end
@@ -7793,7 +7904,6 @@ do
         end
         return Dropdown
     end
-
     function Funcs:AddViewport(Idx, Info)
         if self.Destroyed then return nil end
         Info = Library:Validate(Info, Templates.Viewport)
@@ -9547,6 +9657,9 @@ function Library:ToggleNotificationHistory()
     Library:SetNotificationHistoryVisible(not Library.NotificationHistoryOpen)
 end
 
+--// ==============================================================
+--// CreateWindow - Minimize/Restore desteğiyle
+--// ==============================================================
 function Library:CreateWindow(WindowInfo)
     WindowInfo = Library:Validate(WindowInfo, Templates.Window)
     local ViewportSize: Vector2 = workspace.CurrentCamera.ViewportSize
@@ -9625,8 +9738,18 @@ function Library:CreateWindow(WindowInfo)
     local InitialLeftWidth = math.ceil(WindowInfo.Size.X.Offset * 0.3)
     local IsCompact = WindowInfo.SidebarCompacted
     local LastExpandedWidth = InitialLeftWidth
-    --// Üst sağdaki bildirim çanı için ayrılan ekstra alan (search kutusunu daraltır)
+
+    --// Minimize/Restore state
+    local Minimized = false
+    local MiniFrame
+    local MiniSubtitle
+    local MiniBody
+    local MiniFooterHolder
+    local MiniFooter
+    local MiniLabels = {}
+    local MiniSubtitleExplicit = (WindowInfo.MinimizedSubtitle or "") ~= ""
     local RightBarInset = 50
+    local ApplyWindowVisibility
 
     do
         Library.KeybindFrame, Library.KeybindContainer = Library:AddDraggableMenu("Keybinds")
@@ -9763,7 +9886,6 @@ function Library:CreateWindow(WindowInfo)
             TextSize = 20,
             Parent = TitleHolder,
         })
-        --// RightBarInset ile search kutusunun sağ kenarı bildirim çanından çekilir
         RightWrapper = New("Frame", {
             AnchorPoint = Vector2.new(1, 0.5),
             BackgroundTransparency = 1,
@@ -9885,11 +10007,255 @@ function Library:CreateWindow(WindowInfo)
             })
             Library:ApplyLucideIcon(MoveIconImage, MoveIcon)
         end
-        if not WindowInfo.DisableNotificationBell then
-            --// Notification bell: opens the built-in Notification History,
-            --// with an unread badge. Larger icon, shifted a bit left.
-            local BellIcon = Library:GetIcon("bell")
 
+        --// ============================================================
+        --// MINIMIZE BUTONU + MINIMIZED KART
+        --// ============================================================
+        if WindowInfo.Minimizable then
+            local MinimizeIcon = Library:GetIcon("minus")
+
+            local MinimizeButton = New("TextButton", {
+                AnchorPoint = Vector2.new(1, 0.5),
+                BackgroundColor3 = "MainColor",
+                BackgroundTransparency = 1,
+                Position = UDim2.new(1, -44, 0.5, 0),
+                Size = UDim2.fromOffset(24, 24),
+                Text = MinimizeIcon and "" or "—",
+                TextSize = 14,
+                TextTransparency = 0.35,
+                ZIndex = 3,
+                Parent = TopBar,
+            })
+            table.insert(Library.Corners, New("UICorner", {
+                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                Parent = MinimizeButton,
+            }))
+
+            local MinimizeImage
+            if MinimizeIcon then
+                MinimizeImage = New("ImageLabel", {
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Image = MinimizeIcon.Url,
+                    ImageColor3 = "FontColor",
+                    ImageRectOffset = MinimizeIcon.ImageRectOffset,
+                    ImageRectSize = MinimizeIcon.ImageRectSize,
+                    ImageTransparency = 0.35,
+                    Position = UDim2.fromScale(0.5, 0.5),
+                    ScaleType = Enum.ScaleType.Fit,
+                    Size = UDim2.fromOffset(16, 16),
+                    Parent = MinimizeButton,
+                })
+            end
+
+            Library:AddTooltip("Minimize", nil, MinimizeButton)
+            MinimizeButton.MouseEnter:Connect(function()
+                TweenService:Create(MinimizeButton, Library.TweenInfo, { BackgroundTransparency = 0 }):Play()
+                if MinimizeImage then
+                    TweenService:Create(MinimizeImage, Library.TweenInfo, { ImageTransparency = 0 }):Play()
+                end
+            end)
+            MinimizeButton.MouseLeave:Connect(function()
+                TweenService:Create(MinimizeButton, Library.TweenInfo, { BackgroundTransparency = 1 }):Play()
+                if MinimizeImage then
+                    TweenService:Create(MinimizeImage, Library.TweenInfo, { ImageTransparency = 0.35 }):Play()
+                end
+            end)
+            MinimizeButton.MouseButton1Click:Connect(function()
+                Library.Window:SetMinimized(true)
+            end)
+
+            --// Minimized Kart
+            MiniFrame = New("Frame", {
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundColor3 = function()
+                    return Library:GetBetterColor(Library.Scheme.BackgroundColor, -1)
+                end,
+                Name = "Minimized",
+                Position = WindowInfo.Position,
+                Size = UDim2.fromOffset(WindowInfo.MinimizedWidth, 0),
+                Visible = false,
+                Parent = ScreenGui,
+            })
+            table.insert(Library.Corners, New("UICorner", {
+                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                Parent = MiniFrame,
+            }))
+            table.insert(Library.Scales, New("UIScale", { Parent = MiniFrame }))
+            Library:AddOutline(MiniFrame)
+            New("UIListLayout", {
+                FillDirection = Enum.FillDirection.Vertical,
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Parent = MiniFrame,
+            })
+
+            local MiniHeader = New("Frame", {
+                BackgroundTransparency = 1,
+                LayoutOrder = 0,
+                Size = UDim2.new(1, 0, 0, 46),
+                Parent = MiniFrame,
+            })
+            New("UIPadding", {
+                PaddingLeft = UDim.new(0, 12),
+                PaddingRight = UDim.new(0, 10),
+                Parent = MiniHeader,
+            })
+            New("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal,
+                Padding = UDim.new(0, 10),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                VerticalAlignment = Enum.VerticalAlignment.Center,
+                Parent = MiniHeader,
+            })
+
+            local MiniIconData = WindowInfo.Icon and Library:GetCustomIcon(WindowInfo.Icon) or nil
+            if MiniIconData then
+                local IconHolder = New("Frame", {
+                    BackgroundColor3 = "MainColor",
+                    LayoutOrder = 0,
+                    Size = UDim2.fromOffset(26, 26),
+                    Parent = MiniHeader,
+                })
+                table.insert(Library.Corners, New("UICorner", {
+                    CornerRadius = UDim.new(0, math.max(2, WindowInfo.CornerRadius)),
+                    Parent = IconHolder,
+                }))
+                New("ImageLabel", {
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Image = MiniIconData.Url,
+                    ImageRectOffset = MiniIconData.ImageRectOffset,
+                    ImageRectSize = MiniIconData.ImageRectSize,
+                    Position = UDim2.fromScale(0.5, 0.5),
+                    ScaleType = Enum.ScaleType.Fit,
+                    Size = UDim2.fromOffset(16, 16),
+                    Parent = IconHolder,
+                })
+            end
+
+            local MiniTitleHolder = New("Frame", {
+                BackgroundTransparency = 1,
+                LayoutOrder = 1,
+                Size = UDim2.new(1, 0, 1, 0),
+                Parent = MiniHeader,
+            })
+            New("UIFlexItem", { FlexMode = Enum.UIFlexMode.Shrink, Parent = MiniTitleHolder })
+            New("UIListLayout", {
+                FillDirection = Enum.FillDirection.Vertical,
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                VerticalAlignment = Enum.VerticalAlignment.Center,
+                Parent = MiniTitleHolder,
+            })
+            New("TextLabel", {
+                BackgroundTransparency = 1,
+                LayoutOrder = 0,
+                Size = UDim2.new(1, 0, 0, 17),
+                Text = `<b>{WindowInfo.Title}</b>`,
+                TextSize = 15,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = MiniTitleHolder,
+            })
+            MiniSubtitle = New("TextLabel", {
+                BackgroundTransparency = 1,
+                LayoutOrder = 1,
+                Size = UDim2.new(1, 0, 0, 14),
+                Text = WindowInfo.MinimizedSubtitle or "",
+                TextSize = 12,
+                TextTransparency = 0.55,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Visible = (WindowInfo.MinimizedSubtitle or "") ~= "",
+                Parent = MiniTitleHolder,
+            })
+
+            --// Restore butonu
+            local RestoreIcon = Library:GetIcon("chevron-up")
+            local RestoreButton = New("TextButton", {
+                BackgroundTransparency = 1,
+                LayoutOrder = 4,
+                Size = UDim2.fromOffset(22, 22),
+                Text = RestoreIcon and "" or "^",
+                TextSize = 14,
+                TextTransparency = 0.35,
+                Parent = MiniHeader,
+            })
+            if RestoreIcon then
+                New("ImageLabel", {
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Image = RestoreIcon.Url,
+                    ImageColor3 = "FontColor",
+                    ImageRectOffset = RestoreIcon.ImageRectOffset,
+                    ImageRectSize = RestoreIcon.ImageRectSize,
+                    ImageTransparency = 0.35,
+                    Position = UDim2.fromScale(0.5, 0.5),
+                    ScaleType = Enum.ScaleType.Fit,
+                    Size = UDim2.fromOffset(16, 16),
+                    Parent = RestoreButton,
+                })
+            end
+            Library:AddTooltip("Restore", nil, RestoreButton)
+            RestoreButton.MouseButton1Click:Connect(function()
+                Library.Window:SetMinimized(false)
+            end)
+
+            --// MiniBody
+            MiniBody = New("Frame", {
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                LayoutOrder = 1,
+                Size = UDim2.new(1, 0, 0, 0),
+                Visible = false,
+                Parent = MiniFrame,
+            })
+            New("UIPadding", {
+                PaddingBottom = UDim.new(0, 10),
+                PaddingLeft = UDim.new(0, 12),
+                PaddingRight = UDim.new(0, 12),
+                Parent = MiniBody,
+            })
+            New("UIListLayout", {
+                FillDirection = Enum.FillDirection.Vertical,
+                Padding = UDim.new(0, 4),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Parent = MiniBody,
+            })
+
+            --// MiniFooter
+            MiniFooterHolder = New("Frame", {
+                BackgroundTransparency = 1,
+                LayoutOrder = 2,
+                Size = UDim2.new(1, 0, 0, 26),
+                Parent = MiniFrame,
+            })
+            Library:MakeLine(MiniFooterHolder, {
+                Position = UDim2.fromOffset(0, 0),
+                Size = UDim2.new(1, 0, 0, 1),
+            })
+            New("UIPadding", {
+                PaddingLeft = UDim.new(0, 12),
+                PaddingRight = UDim.new(0, 12),
+                Parent = MiniFooterHolder,
+            })
+            MiniFooter = New("TextLabel", {
+                BackgroundTransparency = 1,
+                Size = UDim2.fromScale(1, 1),
+                Text = "",
+                TextSize = 12,
+                TextTransparency = 0.6,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = MiniFooterHolder,
+            })
+            if typeof(WindowInfo.Footer) == "string" then
+                MiniFooter.Text = WindowInfo.Footer
+            end
+            MiniFooterHolder.Visible = MiniFooter.Text ~= ""
+
+            Library:MakeDraggable(MiniFrame, MiniHeader, true)
+        end
+
+        --// Notification Bell
+        if not WindowInfo.DisableNotificationBell then
+            local BellIcon = Library:GetIcon("bell")
             local BellButton = New("TextButton", {
                 AnchorPoint = Vector2.new(1, 0.5),
                 BackgroundColor3 = "MainColor",
@@ -9902,14 +10268,10 @@ function Library:CreateWindow(WindowInfo)
                 ZIndex = 3,
                 Parent = TopBar,
             })
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                    Parent = BellButton,
-                })
-            )
-
+            table.insert(Library.Corners, New("UICorner", {
+                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                Parent = BellButton,
+            }))
             local BellImage
             if BellIcon then
                 BellImage = New("ImageLabel", {
@@ -9927,7 +10289,6 @@ function Library:CreateWindow(WindowInfo)
                     Parent = BellButton,
                 })
             end
-
             local BadgeHolder = New("Frame", {
                 AnchorPoint = Vector2.new(1, 0),
                 BackgroundColor3 = "AccentColor",
@@ -9955,12 +10316,10 @@ function Library:CreateWindow(WindowInfo)
                 PaddingRight = UDim.new(0, 2),
                 Parent = BadgeHolder,
             })
-
             Library.NotificationBadge = { Holder = BadgeHolder, Label = BadgeLabel }
             table.insert(Library.NotificationBadges, Library.NotificationBadge)
             Library.NotificationBell = BellButton
             Library:UpdateNotificationBadge()
-
             Library:AddTooltip("Notification History", nil, BellButton)
             BellButton.MouseEnter:Connect(function()
                 TweenService:Create(BellButton, Library.TweenInfo, { BackgroundTransparency = 0 }):Play()
@@ -9978,6 +10337,7 @@ function Library:CreateWindow(WindowInfo)
                 Library:ToggleNotificationHistory()
             end)
         end
+
         local BottomClip = New("Frame", {
             AnchorPoint = Vector2.new(0, 1),
             BackgroundTransparency = 1,
@@ -10161,6 +10521,10 @@ function Library:CreateWindow(WindowInfo)
         assert(typeof(Footer) == "string", "Expected string for footer got: " .. typeof(Footer))
         FooterLabel.Text = Footer
         WindowInfo.Footer = Footer
+        if MiniFooter then
+            MiniFooter.Text = Footer
+            MiniFooterHolder.Visible = Footer ~= ""
+        end
     end
 
     function Window:SetAlwaysOnTop(Enabled: boolean)
@@ -10281,6 +10645,82 @@ function Library:CreateWindow(WindowInfo)
         end
     end
 
+    --// ============================================================
+    --// Minimize/Restore API
+    --// ============================================================
+    function Window:IsMinimized()
+        return Minimized
+    end
+
+    function Window:SetMinimized(Value)
+        if not MiniFrame then return end
+        if Value == nil then Value = not Minimized end
+        Value = Value and true or false
+        if Value == Minimized then return end
+        Minimized = Value
+        if Minimized then
+            MiniFrame.Position = MainFrame.Position
+            MiniFrame.AnchorPoint = MainFrame.AnchorPoint
+        else
+            MainFrame.Position = MiniFrame.Position
+            MainFrame.AnchorPoint = MiniFrame.AnchorPoint
+        end
+        ApplyWindowVisibility()
+    end
+
+    function Window:ToggleMinimized()
+        Window:SetMinimized(not Minimized)
+    end
+
+    function Window:SetMinimizedSubtitle(Text)
+        if not MiniSubtitle then return end
+        Text = Text or ""
+        MiniSubtitleExplicit = Text ~= ""
+        if MiniSubtitleExplicit then
+            MiniSubtitle.Text = Text
+            MiniSubtitle.Visible = true
+        elseif Library.ActiveTab then
+            MiniSubtitle.Text = Library.ActiveTab.Name or ""
+            MiniSubtitle.Visible = MiniSubtitle.Text ~= ""
+        else
+            MiniSubtitle.Visible = false
+        end
+    end
+
+    function Window:AddMinimizedLabel(Text)
+        if not MiniBody then return end
+        local Label = New("TextLabel", {
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            LayoutOrder = #MiniLabels,
+            Size = UDim2.new(1, 0, 0, 0),
+            Text = Text or "",
+            TextSize = 13,
+            TextTransparency = 0.25,
+            TextWrapped = true,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Parent = MiniBody,
+        })
+        local Handle = { Label = Label, Type = "MinimizedLabel" }
+        function Handle:SetText(Value) Label.Text = Value or "" end
+        function Handle:SetVisible(Value) Label.Visible = Value and true or false end
+        function Handle:Destroy()
+            local Index = table.find(MiniLabels, Handle)
+            if Index then table.remove(MiniLabels, Index) end
+            Label:Destroy()
+            MiniBody.Visible = #MiniLabels > 0
+        end
+        table.insert(MiniLabels, Handle)
+        MiniBody.Visible = true
+        return Handle
+    end
+
+    function Window:ClearMinimizedLabels()
+        for Index = #MiniLabels, 1, -1 do
+            MiniLabels[Index]:Destroy()
+        end
+    end
+
     local function ApplyCompact()
         IsCompact = Window:GetSidebarWidth() == WindowInfo.SidebarCompactWidth
         if WindowInfo.DisableCompactingSnap then
@@ -10337,6 +10777,11 @@ function Library:CreateWindow(WindowInfo)
             SearchBox.Size = UDim2.fromScale(0.5, 1)
         end
         CurrentTabInfo.Visible = true
+        if MiniSubtitle and not MiniSubtitleExplicit then
+            Name = Name or ""
+            MiniSubtitle.Text = Name
+            MiniSubtitle.Visible = Name ~= ""
+        end
     end
 
     function Window:HideTabInfo()
@@ -10345,7 +10790,6 @@ function Library:CreateWindow(WindowInfo)
             SearchBox.Size = UDim2.fromScale(1, 1)
         end
     end
-
     function Window:AddTab(...)
         local Name = nil
         local Icon = nil
@@ -12278,6 +12722,15 @@ function Library:CreateWindow(WindowInfo)
             end
         end
     end
+
+    --// Window görünürlüğü: hangi kabuk (Main / Mini) ekranda olacak
+    ApplyWindowVisibility = function()
+        MainFrame.Visible = Library.Toggled and not Minimized
+        if MiniFrame then
+            MiniFrame.Visible = Library.Toggled and Minimized
+        end
+    end
+
     function Window:Toggle(Value: boolean?)
         if Fading then
             return
@@ -12298,7 +12751,7 @@ function Library:CreateWindow(WindowInfo)
         if Library.Animations and Library.Animations.ToggleWindow == true then
             local FadeTime = Library.WindowAnimationInfo.Time
             Fading = true
-            if Library.Toggled then
+            if Library.Toggled and not Minimized then
                 MainFrame.Visible = true
             end
             if Library.Toggled then
@@ -12325,11 +12778,11 @@ function Library:CreateWindow(WindowInfo)
                 end
             end
             task.delay(FadeTime, function()
-                MainFrame.Visible = Library.Toggled
+                ApplyWindowVisibility()
                 Fading = false
             end)
         else
-            MainFrame.Visible = Library.Toggled
+            ApplyWindowVisibility()
         end
         if WindowInfo.UnlockMouseWhileOpen then
             ModalElement.Modal = Library.Toggled
@@ -12362,6 +12815,18 @@ function Library:CreateWindow(WindowInfo)
     function Library:Toggle(Value: boolean?)
         return Window:Toggle(Value)
     end
+
+    --// MinimizeKeybind
+    if WindowInfo.Minimizable and WindowInfo.MinimizeKeybind then
+        Library:GiveSignal(UserInputService.InputBegan:Connect(function(Input: InputObject, Processed: boolean)
+            if Processed or Library.Unloaded or not Library.Toggled then return end
+            if Input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+            if Input.KeyCode ~= WindowInfo.MinimizeKeybind then return end
+            if UserInputService:GetFocusedTextBox() then return end
+            Window:ToggleMinimized()
+        end))
+    end
+
     if WindowInfo.EnableSidebarResize then
         local Threshold = (WindowInfo.MinSidebarWidth + WindowInfo.SidebarCompactWidth) * WindowInfo.SidebarCollapseThreshold
         local StartPos, StartWidth
@@ -12507,9 +12972,16 @@ function Library:CreateWindow(WindowInfo)
     end))
     Window.MainFrame = MainFrame
     Library.Window = Window
+
+    --// AutoMinimize
+    if WindowInfo.AutoMinimize and WindowInfo.Minimizable then
+        Window:SetMinimized(true)
+    end
+
     return Window
 end
 
+--// ============ CreateLoading ============
 function Library:CreateLoading(LoadingInfo)
     if Library.ActiveLoading then
         warn("Loading GUI already exists, you cannot create multiple Loading GUIs.")
@@ -13186,6 +13658,7 @@ function Library:Unload()
     Library.NotificationBadge = nil
     table.clear(Library.NotificationBadges)
     Library.NotificationBell = nil
+    Library.NotificationBellMini = nil
     Library.NotificationUnreadCount = 0
     getgenv().Library = nil
 end
