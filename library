@@ -5308,6 +5308,9 @@ do
         return Divider
     end
 
+    -- ═══════════════════════════════════════════════════════════════════
+    -- AddLabel - with Icon support
+    -- ═══════════════════════════════════════════════════════════════════
     function Funcs:AddLabel(...)
         if self.Destroyed then return nil end
         local Data = {}
@@ -5321,12 +5324,19 @@ do
             Data.Size = Params.Size or 14
             Data.Visible = if typeof(Params.Visible) == "boolean" then Params.Visible else true
             Data.Idx = typeof(Second) == "table" and First or nil
+            Data.Icon = Params.Icon or Params.IconName
+            Data.IconPosition = Params.IconPosition
+            Data.IconColor = Params.IconColor
+            Data.IconSize = Params.IconSize or 16
         else
             Data.Text = First or ""
             Data.DoesWrap = Second or false
             Data.Size = 14
             Data.Visible = true
             Data.Idx = select(3, ...) or nil
+            Data.Icon = nil
+            Data.IconPosition = nil
+            Data.IconSize = 16
         end
         local Groupbox = self
         local Container = Groupbox.Container
@@ -5337,31 +5347,145 @@ do
             DoesWrap = Data.DoesWrap,
             Addons = Addons,
             Visible = Data.Visible,
+            Icon = Data.Icon,
+            IconPosition = string.lower(Data.IconPosition or "left"),
+            IconColor = Data.IconColor,
+            IconSize = Data.IconSize,
+            IconImage = nil,
             Type = "Label",
             Parent = Groupbox,
         }
-        local TextLabel = New("TextLabel", {
+        local LabelHolder = New("Frame", {
             BackgroundTransparency = 1,
             Size = UDim2.new(1, 0, 0, 18),
+            Parent = Container,
+        })
+        local TextLabel = New("TextLabel", {
+            BackgroundTransparency = 1,
+            Position = UDim2.fromOffset(0, 0),
+            Size = Data.DoesWrap and UDim2.new(1, 0, 0, 18) or UDim2.new(1, 0, 1, 1),
             Text = Label.Text,
             TextSize = Data.Size,
             TextWrapped = Label.DoesWrap,
             TextXAlignment = Groupbox.IsKeyTab and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left,
             Visible = Label.Visible,
-            Parent = Container,
+            Parent = LabelHolder,
         })
-        function Label:Display()
-            if not Label.DoesWrap then
+        local TextPadding = New("UIPadding", { Parent = TextLabel })
+        if not Label.DoesWrap then
+            New("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal,
+                HorizontalAlignment = Enum.HorizontalAlignment.Right,
+                Padding = UDim.new(0, 6),
+                Parent = TextLabel,
+            })
+        end
+        local function GetDefaultIconColor(ParsedIcon)
+            if ParsedIcon and ParsedIcon.Custom then
+                return Library.Scheme.WhiteColor
+            end
+            return Library.Scheme.FontColor
+        end
+        local function ApplyIconLayout()
+            if not Label.IconImage then
+                TextPadding.PaddingLeft = UDim.new(0, 0)
+                TextPadding.PaddingRight = UDim.new(0, 0)
                 return
             end
-            local Width = TextLabel.AbsoluteSize.X / Library.DPIScale
+            local Padding = Label.IconSize + 6
+            if Label.IconPosition == "left" then
+                TextPadding.PaddingLeft = UDim.new(0, Padding)
+                TextPadding.PaddingRight = UDim.new(0, 0)
+                Label.IconImage.AnchorPoint = Vector2.new(0, 0.5)
+                Label.IconImage.Position = UDim2.new(0, 0, 0.5, 0)
+            else
+                TextPadding.PaddingLeft = UDim.new(0, 0)
+                TextPadding.PaddingRight = UDim.new(0, Padding)
+                Label.IconImage.AnchorPoint = Vector2.new(1, 0.5)
+                Label.IconImage.Position = UDim2.new(1, 0, 0.5, 0)
+            end
+        end
+        function Label:Display()
+            if not Label.DoesWrap then return end
+            local PadLeft = TextPadding.PaddingLeft.Offset
+            local PadRight = TextPadding.PaddingRight.Offset
+            local Width = (LabelHolder.AbsoluteSize.X / Library.DPIScale) - PadLeft - PadRight
             if Width <= 0 then return end
             local _, Y = Library:GetTextBounds(Label.Text, TextLabel.FontFace, TextLabel.TextSize, Width)
-            TextLabel.Size = UDim2.new(1, 0, 0, Y + 4)
+            local Height = Y + 4
+            TextLabel.Size = UDim2.new(1, 0, 0, Height)
+            LabelHolder.Size = UDim2.new(1, 0, 0, Height)
+        end
+        function Label:SetIcon(NewIcon: string?)
+            if NewIcon == Label.Icon and Label.IconImage ~= nil then
+                return
+            end
+            Label.Icon = NewIcon
+            if Label.IconImage then
+                Library:RemoveFromRegistry(Label.IconImage)
+                Label.IconImage:Destroy()
+                Label.IconImage = nil
+            end
+            if not NewIcon or NewIcon == "" then
+                ApplyIconLayout()
+                if Label.DoesWrap then Label:Display() end
+                Groupbox:Resize()
+                return
+            end
+            local ParsedIcon = Library:GetCustomIcon(NewIcon)
+            if not ParsedIcon then
+                ApplyIconLayout()
+                return
+            end
+            local ColorValue = Label.IconColor
+            if not ColorValue then
+                ColorValue = GetDefaultIconColor(ParsedIcon)
+            end
+            Label.IconImage = New("ImageLabel", {
+                BackgroundTransparency = 1,
+                Size = UDim2.fromOffset(Label.IconSize, Label.IconSize),
+                ImageColor3 = ColorValue,
+                ZIndex = 2,
+                Parent = LabelHolder,
+            })
+            Library:ApplyLucideIcon(Label.IconImage, ParsedIcon)
+            ApplyIconLayout()
+            if Label.DoesWrap then Label:Display() end
+            Groupbox:Resize()
+        end
+        function Label:SetIconPosition(NewPosition: string)
+            NewPosition = string.lower(NewPosition or "left")
+            assert(NewPosition == "left" or NewPosition == "right", "Icon Position must be 'left' or 'right'.")
+            Label.IconPosition = NewPosition
+            ApplyIconLayout()
+            if Label.DoesWrap then Label:Display() end
+        end
+        function Label:SetIconColor(Color: Color3?)
+            Label.IconColor = Color
+            if not Label.IconImage then return end
+            if Color then
+                Label.IconImage.ImageColor3 = Color
+                Library:RemoveFromRegistry(Label.IconImage)
+            else
+                local ParsedIcon = Label.Icon and Library:GetCustomIcon(Label.Icon)
+                Label.IconImage.ImageColor3 = GetDefaultIconColor(ParsedIcon)
+            end
+        end
+        function Label:SetIconSize(Size: number)
+            Label.IconSize = Size
+            if Label.IconImage then
+                Label.IconImage.Size = UDim2.fromOffset(Size, Size)
+            end
+            ApplyIconLayout()
+            if Label.DoesWrap then Label:Display() end
+            Groupbox:Resize()
+        end
+        function Label:RemoveIcon()
+            Label:SetIcon(nil)
         end
         function Label:SetVisible(Visible: boolean)
             Label.Visible = Visible
-            TextLabel.Visible = Label.Visible
+            LabelHolder.Visible = Visible
             Groupbox:Resize()
         end
         function Label:SetText(Text: string)
@@ -5374,28 +5498,24 @@ do
             Label:Display()
             local Last = TextLabel.AbsoluteSize
             table.insert(Label.Connections, TextLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-                if TextLabel.AbsoluteSize == Last then
-                    return
-                end
+                if TextLabel.AbsoluteSize == Last then return end
                 Label:Display()
                 Last = TextLabel.AbsoluteSize
                 Groupbox:Resize()
             end))
-        else
-            New("UIListLayout", {
-                FillDirection = Enum.FillDirection.Horizontal,
-                HorizontalAlignment = Enum.HorizontalAlignment.Right,
-                Padding = UDim.new(0, 6),
-                Parent = TextLabel,
-            })
+        end
+        if Label.Icon then
+            Label:SetIcon(Label.Icon)
         end
         Groupbox:Resize()
         Label.TextLabel = TextLabel
         Label.Container = Container
+        Label.Holder = LabelHolder
+        Label.LabelHolder = LabelHolder
+        Label.TextPadding = TextPadding
         if not Data.DoesWrap then
             setmetatable(Label, BaseAddons)
         end
-        Label.Holder = TextLabel
         table.insert(Groupbox.Elements, Label)
         if Data.Idx then
             Labels[Data.Idx] = Label
@@ -5417,8 +5537,13 @@ do
                     end
                 end
             end
-            if TextLabel then
-                TextLabel:Destroy()
+            if Label.IconImage then
+                Library:RemoveFromRegistry(Label.IconImage)
+                Label.IconImage:Destroy()
+                Label.IconImage = nil
+            end
+            if LabelHolder then
+                LabelHolder:Destroy()
             end
             local ElemIdx = table.find(Groupbox.Elements, Label)
             if ElemIdx then
@@ -5436,6 +5561,7 @@ do
         end
         return Label
     end
+    -- ═══════════════════════════════════════════════════════════════════
 
     function Funcs:AddButton(...)
         if self.Destroyed then return nil end
@@ -7900,6 +8026,7 @@ do
         end
         return Dropdown
     end
+
     function Funcs:AddViewport(Idx, Info)
         if self.Destroyed then return nil end
         Info = Library:Validate(Info, Templates.Viewport)
